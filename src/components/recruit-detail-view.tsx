@@ -107,7 +107,7 @@ export function RecruitDetailView({
 
         {created ? (
           <div className="mt-5 rounded-[1.4rem] bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
-            모집글이 생성되었습니다. 지금 이 화면을 그대로 발표 흐름에 사용할 수
+            모집글이 생성되었습니다. 이제 상세 정보와 지원 현황을 바로 확인할 수
             있습니다.
           </div>
         ) : null}

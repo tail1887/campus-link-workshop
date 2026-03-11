@@ -25,7 +25,7 @@ const copyByMode = {
     eyebrow: "Login Entry",
     title: "기존 계정으로 바로 진입",
     description:
-      "Phase 1 A 계약 위에서 세션을 시작하고, 보호 페이지로 자연스럽게 이어집니다.",
+      "로그인 후 바로 내 프로필과 모집 기능으로 이어집니다.",
     submit: "로그인하고 계속하기",
     endpoint: "/api/auth/login",
     alternateHref: "/signup",
@@ -35,7 +35,7 @@ const copyByMode = {
     eyebrow: "Signup Entry",
     title: "새 계정을 만들고 시작",
     description:
-      "회원가입이 완료되면 세션과 기본 온보딩 상태가 함께 만들어집니다.",
+      "회원가입이 완료되면 기본 설정과 함께 바로 서비스를 이용할 수 있습니다.",
     submit: "회원가입하고 계속하기",
     endpoint: "/api/auth/signup",
     alternateHref: "/login",
@@ -62,11 +62,11 @@ export function AuthForm({ mode, nextPath, dataSource }: AuthFormProps) {
   const helperMessage =
     mode === "login"
       ? dataSource === "mock"
-        ? "로그인 demo 계정: student@campus-link.demo / jungle1234"
-        : "database 모드에서는 먼저 회원가입으로 계정을 만든 뒤 로그인하세요."
+        ? "체험용 계정으로 주요 기능을 바로 둘러볼 수 있습니다."
+        : "먼저 회원가입으로 계정을 만든 뒤 로그인하세요."
       : dataSource === "mock"
-        ? "회원가입 없이 빠른 시연이 필요하면 demo 계정으로도 흐름을 확인할 수 있습니다."
-        : "회원가입이 완료되면 온보딩 설문으로 이어집니다.";
+        ? "지금 회원가입하거나 체험용 계정으로 먼저 서비스를 살펴볼 수 있습니다."
+        : "회원가입이 완료되면 기본 설정 화면으로 이어집니다.";
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -123,9 +123,9 @@ export function AuthForm({ mode, nextPath, dataSource }: AuthFormProps) {
         </p>
         <div className="mt-6 space-y-3">
           {[
-            "세션은 Phase 1 A의 campus-link.session cookie를 사용",
-            "회원가입 직후 온보딩 상태는 interests step으로 시작",
-            "다음 브랜치는 기본 진입 경로만 교체해 연결 가능",
+            "로그인 상태가 유지되어 보호된 페이지로 바로 이동합니다.",
+            "회원가입 직후 기본 설정 단계를 이어서 진행할 수 있습니다.",
+            "계정 생성 후 프로필과 모집 기능을 순서대로 이용할 수 있습니다.",
           ].map((item) => (
             <div
               key={item}
@@ -198,7 +198,7 @@ export function AuthForm({ mode, nextPath, dataSource }: AuthFormProps) {
         <div className="mt-5 rounded-[1.25rem] bg-slate-50 px-4 py-3 text-sm leading-7 text-[color:var(--muted)]">
           {dataSource === "mock" && mode === "login" ? (
             <>
-              로그인 demo 계정:{" "}
+              체험용 계정:{" "}
               <span className="font-semibold text-slate-900">
                 student@campus-link.demo / jungle1234
               </span>
@@ -219,7 +219,7 @@ export function AuthForm({ mode, nextPath, dataSource }: AuthFormProps) {
           disabled={isPending}
           className="button-primary mt-6 w-full disabled:cursor-not-allowed disabled:opacity-70"
         >
-          {isPending ? "세션 여는 중..." : copy.submit}
+          {isPending ? "로그인 정보 확인 중..." : copy.submit}
         </button>
 
         <div className="mt-4 flex items-center justify-between gap-3 text-sm">

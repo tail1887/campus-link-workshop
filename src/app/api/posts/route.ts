@@ -74,7 +74,7 @@ export async function POST(request: Request) {
       normalizeText(body.meetingStyle ?? "온·오프라인 혼합") ||
       "온·오프라인 혼합",
     schedule: normalizeText(body.schedule ?? "세부 일정 협의") || "세부 일정 협의",
-    goal: normalizeText(body.goal ?? "데모 완성") || "데모 완성",
+    goal: normalizeText(body.goal ?? "서비스 MVP 완성") || "서비스 MVP 완성",
     ownerId: authContext.authenticated ? authContext.user.id : null,
   };
   const validationMessage =
@@ -111,7 +111,7 @@ export async function POST(request: Request) {
         message:
           getRecruitDataSource() === "database"
             ? "모집글이 데이터베이스에 저장되었습니다."
-            : "모집글이 mock 저장소에 생성되었습니다.",
+            : "모집글이 저장되었습니다.",
       },
     },
     { status: 201 },
