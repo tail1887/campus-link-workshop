@@ -78,6 +78,7 @@ npm run db:push
 
 - 기본값은 `RECRUIT_DATA_SOURCE="mock"` 입니다.
 - PostgreSQL을 실제로 쓰려면 `.env`에서 `DATABASE_URL`을 채우고 `RECRUIT_DATA_SOURCE="database"`로 바꿔야 합니다.
+- 스키마 변경을 배포 환경에 반영할 때는 `npm run db:deploy`를 사용합니다.
 
 ### 3) 검증
 
@@ -91,6 +92,7 @@ npm run build
 - GitHub 저장소를 Vercel에 Import 하면 바로 배포 가능
 - PostgreSQL 모드 배포 시에는 `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `RECRUIT_DATA_SOURCE` 환경 변수가 필요
 - 2026-03-11 현재 Vercel 프로젝트는 Neon Postgres가 연결되어 있고, 프로덕션/프리뷰/개발 환경에 DB 연결 값이 등록되어 있다
+- `main` 머지 후 GitHub Actions는 Vercel 프로덕션 배포 전에 `npm run db:deploy`로 Prisma migration을 자동 반영한다
 - 로컬은 Docker 기반 PostgreSQL을 붙일 수 있고, 배포는 Neon 같은 관리형 PostgreSQL을 별도로 연결하는 구조
 - GitHub Repository: [tail1887/campus-link-workshop](https://github.com/tail1887/campus-link-workshop)
 

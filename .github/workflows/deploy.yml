@@ -42,6 +42,14 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
+      - name: Run Prisma migrations
+        shell: bash
+        run: |
+          set -a
+          source .vercel/.env.production.local
+          set +a
+          npm run db:deploy
+
       - name: Build Project Artifacts
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
         env:
