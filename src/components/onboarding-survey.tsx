@@ -286,10 +286,10 @@ export function OnboardingSurvey({ entry }: OnboardingSurveyProps) {
                     type="button"
                     key={item.step}
                     onClick={() => handleStepJump(item.step)}
-                    className={`flex items-center justify-between rounded-[1.35rem] border px-4 py-3 text-left ${
+                    className={`flex items-center justify-between rounded-[1.35rem] border px-4 py-3 text-left transition duration-200 hover:-translate-y-1 hover:shadow-[0_18px_38px_rgba(16,35,58,0.12)] ${
                       active
-                        ? "border-slate-900 bg-slate-950 text-white"
-                        : "border-white/65 bg-white/78 text-slate-900"
+                        ? "border-slate-900 bg-slate-950 text-white hover:bg-slate-900"
+                        : "border-white/65 bg-white/78 text-slate-900 hover:border-slate-200 hover:bg-white"
                     }`}
                   >
                     <div>
@@ -424,10 +424,10 @@ export function OnboardingSurvey({ entry }: OnboardingSurveyProps) {
                       type="button"
                       key={keyword}
                       onClick={() => toggleKeyword(keyword)}
-                      className={`rounded-full px-4 py-3 text-sm font-semibold ${
+                      className={`rounded-full px-4 py-3 text-sm font-semibold transition duration-200 hover:-translate-y-1 hover:shadow-[0_14px_28px_rgba(16,35,58,0.12)] ${
                         active
-                          ? "bg-slate-950 text-white"
-                          : "border border-slate-200/80 bg-white/84 text-slate-700"
+                          ? "bg-slate-950 text-white hover:bg-slate-900"
+                          : "border border-slate-200/80 bg-white/84 text-slate-700 hover:border-slate-300 hover:bg-white hover:text-slate-950"
                       }`}
                     >
                       #{keyword}
@@ -614,6 +614,9 @@ export function OnboardingSurvey({ entry }: OnboardingSurveyProps) {
                 >
                   프로필 단계 다시 보기
                 </button>
+                <Link href="/" className="button-secondary">
+                  둘러보기
+                </Link>
                 <button
                   type="button"
                   onClick={() => {
