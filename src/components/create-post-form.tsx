@@ -1,9 +1,20 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useDeferredValue, useState, useTransition } from "react";
 import { PostCard } from "@/components/post-card";
+import {
+  buildPostAiAssistViewModel,
+  type BranchLocalPostAssistDraft,
+  buildRecruitPostSuggestionRequest,
+  emptyPostAiAssistSuggestions,
+  mapSuggestionResultsToPostAssistSuggestions,
+  type PostAiAssistSuggestions,
+  type PostAiAssistTarget,
+} from "@/lib/post-ai-assist/adapter";
 import { addStoredPost } from "@/lib/storage";
+import type { ApiError, ApiSuccess } from "@/types/identity";
+import type { AiSuggestionJobPayload } from "@/types/ai";
 import type { CreateRecruitPostInput, RecruitPost } from "@/types/recruit";
 
 type CurrentUser = {
@@ -68,15 +79,35 @@ const sampleDraft: DraftState = {
   goal: "Vercel 배포까지 마친 발표용 서비스 완성",
 };
 
+function parseCommaSeparatedText(value: string) {
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function buildPostAssistDraft(draft: DraftState): BranchLocalPostAssistDraft {
+  return {
+    category: draft.category,
+    title: draft.title,
+    campus: draft.campus,
+    summary: draft.summary,
+    description: draft.description,
+    roles: parseCommaSeparatedText(draft.rolesText),
+    techStack: parseCommaSeparatedText(draft.techStackText),
+    capacity: Number(draft.capacity || "1"),
+    stage: draft.stage,
+    deadline: draft.deadline,
+    ownerRole: draft.ownerRole,
+    meetingStyle: draft.meetingStyle,
+    schedule: draft.schedule,
+    goal: draft.goal,
+  };
+}
+
 function toPreviewPost(draft: DraftState): RecruitPost {
-  const roles = draft.rolesText
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-  const techStack = draft.techStackText
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
+  const roles = parseCommaSeparatedText(draft.rolesText);
+  const techStack = parseCommaSeparatedText(draft.techStackText);
 
   return {
     id: "preview",
@@ -120,9 +151,16 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
     ownerName: currentUser.displayName,
   }));
   const [error, setError] = useState("");
-  const [isPending, startTransition] = useTransition();
+  const [notice, setNotice] = useState("");
+  const [suggestions, setSuggestions] =
+    useState<PostAiAssistSuggestions | null>(null);
+  const [isSubmitPending, startSubmitTransition] = useTransition();
+  const [isAssistPending, startAssistTransition] = useTransition();
+  const deferredDraft = useDeferredValue(draft);
 
-  const previewPost = toPreviewPost(draft);
+  const previewPost = toPreviewPost(deferredDraft);
+  const assistDraft = buildPostAssistDraft(deferredDraft);
+  const assistModel = buildPostAiAssistViewModel(assistDraft);
 
   const updateField = <K extends keyof DraftState>(key: K, value: DraftState[K]) => {
     setDraft((current) => ({
@@ -131,18 +169,140 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
     }));
   };
 
+  const pollSuggestionJob = async (jobId: string) => {
+    let attempt = 0;
+
+    while (attempt < 6) {
+      const response = await fetch(`/api/ai/suggestions/jobs/${jobId}`, {
+        cache: "no-store",
+      });
+      const result = (await response.json()) as
+        | ApiSuccess<AiSuggestionJobPayload>
+        | ApiError<string>;
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          "error" in result
+            ? result.error.message
+            : "AI suggestion 상태를 불러오지 못했습니다.",
+        );
+      }
+
+      if (result.data.job.status === "succeeded" && result.data.job.result) {
+        return result.data.job.result;
+      }
+
+      if (result.data.job.status === "failed") {
+        throw new Error(
+          result.data.job.error?.message ?? "AI suggestion 생성에 실패했습니다.",
+        );
+      }
+
+      attempt += 1;
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+
+    throw new Error("AI suggestion 결과를 기다리는 중 시간이 초과되었습니다.");
+  };
+
+  const applySuggestion = (
+    target: PostAiAssistTarget,
+    text: string,
+    label: string,
+  ) => {
+    updateField(target, text);
+    setNotice(`${label} 추천을 현재 draft에 반영했습니다.`);
+    setError("");
+  };
+
+  const generateSuggestions = () => {
+    setError("");
+    setNotice("");
+
+    startAssistTransition(async () => {
+      try {
+        const nextDraft = buildPostAssistDraft(draft);
+        const locale =
+          typeof window !== "undefined" ? window.navigator.language : "ko-KR";
+        const targets: PostAiAssistTarget[] = ["title", "summary", "description"];
+
+        const results = await Promise.all(
+          targets.map(async (target) => {
+            const response = await fetch("/api/ai/suggestions/jobs", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(
+                buildRecruitPostSuggestionRequest({
+                  draft: nextDraft,
+                  target,
+                  locale,
+                }),
+              ),
+            });
+            const result = (await response.json()) as
+              | ApiSuccess<AiSuggestionJobPayload>
+              | ApiError<string>;
+
+            if (!response.ok || !result.success) {
+              throw new Error(
+                "error" in result
+                  ? result.error.message
+                  : "AI suggestion 요청에 실패했습니다.",
+              );
+            }
+
+            return pollSuggestionJob(result.data.job.id);
+          }),
+        );
+
+        const nextSuggestions = mapSuggestionResultsToPostAssistSuggestions(results);
+        setSuggestions(nextSuggestions);
+        setNotice(
+          nextSuggestions.summaryNote || "공유 AI suggestion 초안을 불러왔습니다.",
+        );
+      } catch (requestError) {
+        setSuggestions(null);
+        setError(
+          requestError instanceof Error
+            ? requestError.message
+            : "AI suggestion 생성에 실패했습니다.",
+        );
+      }
+    });
+  };
+
+  const applyTopSuggestions = () => {
+    const nextSuggestions = suggestions ?? emptyPostAiAssistSuggestions();
+
+    if (
+      nextSuggestions.title.length === 0 &&
+      nextSuggestions.summary.length === 0 &&
+      nextSuggestions.description.length === 0
+    ) {
+      setNotice("먼저 추천 생성을 실행한 뒤 적용할 수 있습니다.");
+      setError("");
+      return;
+    }
+
+    setDraft((current) => ({
+      ...current,
+      title: nextSuggestions.title[0]?.text ?? current.title,
+      summary: nextSuggestions.summary[0]?.text ?? current.summary,
+      description: nextSuggestions.description[0]?.text ?? current.description,
+    }));
+    setNotice("제목, 요약, 설명에 추천 초안을 한 번에 적용했습니다.");
+    setError("");
+  };
+
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
+    setNotice("");
 
-    const roles = draft.rolesText
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean);
-    const techStack = draft.techStackText
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean);
+    const roles = parseCommaSeparatedText(draft.rolesText);
+    const techStack = parseCommaSeparatedText(draft.techStackText);
 
     if (
       !draft.title.trim() ||
@@ -155,7 +315,7 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
       return;
     }
 
-    startTransition(async () => {
+    startSubmitTransition(async () => {
       const payload: CreateRecruitPostInput = {
         category: draft.category,
         title: draft.title.trim(),
@@ -226,7 +386,11 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
           </div>
           <button
             type="button"
-            onClick={() => setDraft(sampleDraft)}
+            onClick={() => {
+              setDraft(sampleDraft);
+              setNotice("샘플 draft를 불러왔습니다. 필요하면 바로 AI 추천을 생성해보세요.");
+              setError("");
+            }}
             className="button-ghost px-4 py-2 text-sm"
           >
             샘플 자동 입력
@@ -400,18 +564,151 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
               {error}
             </div>
           ) : null}
+          {notice ? (
+            <div className="rounded-[1.25rem] bg-sky-50 px-4 py-3 text-sm font-medium text-sky-700">
+              {notice}
+            </div>
+          ) : null}
 
           <button
             type="submit"
-            disabled={isPending}
+            disabled={isSubmitPending}
             className="button-primary w-full disabled:cursor-not-allowed disabled:opacity-70"
           >
-            {isPending ? "모집글 생성 중..." : "모집글 생성하기"}
+            {isSubmitPending ? "모집글 생성 중..." : "모집글 생성하기"}
           </button>
         </div>
       </form>
 
       <div className="space-y-4">
+        <div className="panel rounded-[1.8rem] p-5 sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
+                AI Assist
+              </p>
+              <h2 className="text-2xl font-semibold text-slate-950">
+                {assistModel.title}
+              </h2>
+              <p className="text-sm leading-7 text-[color:var(--muted)]">
+                {assistModel.subtitle}
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 sm:items-end">
+              <span className="rounded-full bg-[color:var(--teal-soft)] px-3 py-1 text-xs font-semibold text-[color:var(--teal)]">
+                {assistModel.badge}
+              </span>
+              <button
+                type="button"
+                onClick={generateSuggestions}
+                disabled={isAssistPending}
+                className="button-secondary px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {isAssistPending ? "추천 생성 중..." : "추천 생성"}
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {assistModel.contextCards.map((item) => (
+              <div
+                key={item.label}
+                className="rounded-[1.2rem] border border-slate-200/80 bg-white/82 px-4 py-4"
+              >
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--muted)]">
+                  {item.label}
+                </p>
+                <p className="mt-2 text-sm font-semibold leading-7 text-slate-950">
+                  {item.value}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={applyTopSuggestions}
+              disabled={!suggestions}
+              className="button-primary w-full sm:w-auto"
+            >
+              추천 3종 한 번에 적용
+            </button>
+            <p className="text-sm leading-7 text-[color:var(--muted)]">
+              shared suggestion job API가 현재 draft를 읽어 제목, 요약, 설명 초안을 생성합니다.
+            </p>
+          </div>
+
+          {suggestions ? (
+            <div className="mt-5 space-y-4">
+              {(
+                [
+                  ["title", "제목 추천", suggestions.title],
+                  ["summary", "요약 추천", suggestions.summary],
+                  ["description", "상세 설명 추천", suggestions.description],
+                ] as const
+              ).map(([target, heading, items]) => (
+                <div
+                  key={target}
+                  className="rounded-[1.35rem] border border-slate-200/80 bg-white/82 p-4"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-slate-950">{heading}</p>
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-600">
+                      {items.length} options
+                    </span>
+                  </div>
+                  <div className="mt-3 grid gap-3">
+                    {items.map((item) => (
+                      <div
+                        key={item.id}
+                        className="rounded-[1.1rem] border border-slate-200/80 bg-white px-4 py-4"
+                      >
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="space-y-2">
+                            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--muted)]">
+                              {item.label}
+                            </p>
+                            <p className="text-sm leading-7 text-slate-950 whitespace-pre-line">
+                              {item.text}
+                            </p>
+                            <p className="text-xs leading-6 text-[color:var(--muted)]">
+                              {item.rationale} · {item.confidence}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => applySuggestion(item.target, item.text, heading)}
+                            className="button-ghost px-4 py-2 text-sm"
+                          >
+                            적용
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {suggestions.generatedAt ? (
+                <p className="text-xs font-medium uppercase tracking-[0.14em] text-[color:var(--muted)]">
+                  최근 추천 생성 {new Date(suggestions.generatedAt).toLocaleString("ko-KR")}
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <div className="mt-5 grid gap-3">
+              {assistModel.notes.map((note) => (
+                <div
+                  key={note}
+                  className="rounded-[1.2rem] border border-slate-200/80 bg-white/82 px-4 py-3 text-sm leading-7 text-[color:var(--muted)]"
+                >
+                  {note}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="panel rounded-[1.8rem] p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
             Live Preview
@@ -425,6 +722,32 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
           </p>
         </div>
         <PostCard post={previewPost} />
+
+        <div className="panel rounded-[1.8rem] p-5 sm:p-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
+            AI Replacement Points
+          </p>
+          <div className="mt-4 grid gap-3">
+            {assistModel.replacementPoints.map((point) => (
+              <div
+                key={point.id}
+                className="rounded-[1.2rem] border border-slate-200/80 bg-white/82 px-4 py-4"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-slate-950">
+                    {point.title}
+                  </p>
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-600">
+                    {point.target}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm leading-7 text-[color:var(--muted)]">
+                  {point.description}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
