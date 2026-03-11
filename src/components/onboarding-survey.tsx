@@ -37,10 +37,10 @@ const stepMeta: Array<{
   label: string;
   title: string;
 }> = [
-  { step: "account", label: "Step 01", title: "Account Ready" },
-  { step: "interests", label: "Step 02", title: "Interests" },
-  { step: "profile", label: "Step 03", title: "Profile" },
-  { step: "complete", label: "Done", title: "Complete" },
+  { step: "account", label: "1단계", title: "계정 확인" },
+  { step: "interests", label: "2단계", title: "관심사 선택" },
+  { step: "profile", label: "3단계", title: "프로필 작성" },
+  { step: "complete", label: "완료", title: "설정 완료" },
 ];
 
 type OnboardingSurveyProps = {
@@ -111,17 +111,17 @@ export function OnboardingSurvey({ entry }: OnboardingSurveyProps) {
       !snapshot.account.password.trim() ||
       !snapshot.account.displayName.trim()
     ) {
-      setError("Email, password, and display name are required.");
+      setError("이메일, 비밀번호, 표시 이름은 필수입니다.");
       return;
     }
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(snapshot.account.email.trim())) {
-      setError("Enter a valid email format for the signup step.");
+      setError("올바른 이메일 형식으로 입력해 주세요.");
       return;
     }
 
     if (snapshot.account.password.trim().length < 8) {
-      setError("Password must be at least 8 characters.");
+      setError("비밀번호는 8자 이상이어야 합니다.");
       return;
     }
 
@@ -180,7 +180,7 @@ export function OnboardingSurvey({ entry }: OnboardingSurveyProps) {
 
   const handleInterestContinue = () => {
     if (selectedKeywords.length < 2) {
-      setError("Choose at least two keywords for the survey.");
+      setError("관심 키워드는 두 개 이상 선택해 주세요.");
       return;
     }
 
@@ -190,7 +190,7 @@ export function OnboardingSurvey({ entry }: OnboardingSurveyProps) {
 
   const handleProfileComplete = () => {
     if (!snapshot.profile.intro.trim()) {
-      setError("Add a short intro before finishing onboarding.");
+      setError("온보딩을 마치기 전에 한 줄 소개를 입력해 주세요.");
       return;
     }
 
@@ -219,26 +219,25 @@ export function OnboardingSurvey({ entry }: OnboardingSurveyProps) {
         <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
           <div className="space-y-5">
             <span className="eyebrow">
-              {entry === "signup" ? "Phase 1 Signup" : "Phase 1 Onboarding"}
+              {entry === "signup" ? "1단계 회원가입" : "1단계 온보딩"}
             </span>
             <h1 className="section-title text-slate-950">
-              Join faster,
+              빠르게 시작하고,
               <br />
-              then tune your fit.
+              내 취향에 맞게 다듬어 보세요.
             </h1>
             <p className="section-subtitle">
-              This flow follows the Phase 1 onboarding contract. After signup,
-              onboarding starts from interests and profile setup, while the
-              account step stays available as a lightweight confirmation shell
-              until the identity contract branch merges.
+              이 흐름은 1단계 온보딩 계약을 기준으로 구성되어 있습니다.
+              회원가입 뒤에는 관심사와 프로필 설정부터 자연스럽게 이어지고,
+              계정 단계는 identity 계약 브랜치가 합쳐질 때까지 가볍게 확인만 할 수 있도록 남겨두었습니다.
             </p>
             <div className="info-grid">
               {[
-                "Signup moves straight into onboarding instead of repeating registration.",
-                "Account details remain a lightweight local confirmation step.",
-                "Keyword choices map to onboarding.interestKeywords.",
-                "Completion flips the local onboarding status to completed.",
-                "Temporary profile answers stay branch-local on purpose.",
+                "회원가입 뒤에는 같은 내용을 다시 묻지 않고 바로 온보딩으로 이어집니다.",
+                "계정 정보는 임시 로컬 확인 단계로만 유지됩니다.",
+                "선택한 키워드는 onboarding.interestKeywords와 연결됩니다.",
+                "완료 시 로컬 온보딩 상태가 completed로 바뀝니다.",
+                "프로필 답변은 의도적으로 브랜치 로컬 상태에만 저장됩니다.",
               ].map((item) => (
                 <div
                   key={item}
@@ -254,12 +253,12 @@ export function OnboardingSurvey({ entry }: OnboardingSurveyProps) {
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-                  Progress
+                  진행 상태
                 </p>
                 <h2 className="mt-2 text-2xl font-semibold text-slate-950">
                   {snapshot.onboarding.status === "completed"
-                    ? "Onboarding complete"
-                    : "Setup in progress"}
+                    ? "온보딩이 완료되었습니다"
+                    : "설정을 진행하고 있어요"}
                 </h2>
               </div>
               <button
@@ -270,7 +269,7 @@ export function OnboardingSurvey({ entry }: OnboardingSurveyProps) {
                 }}
                 className="button-secondary px-4 py-3 text-sm"
               >
-                Reset local flow
+                처음부터 다시 하기
               </button>
             </div>
 
@@ -287,10 +286,10 @@ export function OnboardingSurvey({ entry }: OnboardingSurveyProps) {
                     type="button"
                     key={item.step}
                     onClick={() => handleStepJump(item.step)}
-                    className={`flex items-center justify-between rounded-[1.35rem] border px-4 py-3 text-left ${
+                    className={`flex items-center justify-between rounded-[1.35rem] border px-4 py-3 text-left transition duration-200 hover:-translate-y-1 hover:shadow-[0_18px_38px_rgba(16,35,58,0.12)] ${
                       active
-                        ? "border-slate-900 bg-slate-950 text-white"
-                        : "border-white/65 bg-white/78 text-slate-900"
+                        ? "border-slate-900 bg-slate-950 text-white hover:bg-slate-900"
+                        : "border-white/65 bg-white/78 text-slate-900 hover:border-slate-200 hover:bg-white"
                     }`}
                   >
                     <div>
@@ -314,7 +313,7 @@ export function OnboardingSurvey({ entry }: OnboardingSurveyProps) {
                             : "bg-slate-100 text-slate-500"
                       }`}
                     >
-                      {complete ? "Done" : active ? "Now" : "Pending"}
+                      {complete ? "완료" : active ? "진행 중" : "대기"}
                     </span>
                   </button>
                 );
@@ -329,18 +328,18 @@ export function OnboardingSurvey({ entry }: OnboardingSurveyProps) {
           {currentStep === "account" ? (
             <>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-                Step 1
+                1단계
               </p>
               <h2 className="mt-2 text-2xl font-semibold text-slate-950">
-                Confirm your account setup
+                계정 정보를 확인해 주세요
               </h2>
               <p className="mt-3 text-sm leading-7 text-[color:var(--muted)]">
-                This step stays as a lightweight bridge for the Phase 1 contract.
-                If you arrived from signup, you can skip straight to interests.
+                이 단계는 1단계 계약 연결을 위한 가벼운 확인 화면입니다.
+                회원가입을 마치고 들어왔다면 바로 관심사 선택으로 넘어가도 됩니다.
               </p>
               <div className="mt-6 grid gap-4 md:grid-cols-2">
                 <label className="space-y-2 text-sm font-semibold text-slate-800 md:col-span-2">
-                  Campus email
+                  학교 이메일
                   <input
                     className="field"
                     value={snapshot.account.email}
@@ -349,7 +348,7 @@ export function OnboardingSurvey({ entry }: OnboardingSurveyProps) {
                   />
                 </label>
                 <label className="space-y-2 text-sm font-semibold text-slate-800">
-                  Password
+                  비밀번호
                   <input
                     type="password"
                     className="field"
@@ -357,27 +356,27 @@ export function OnboardingSurvey({ entry }: OnboardingSurveyProps) {
                     onChange={(event) =>
                       updateAccount("password", event.target.value)
                     }
-                    placeholder="At least 8 characters"
+                    placeholder="8자 이상 입력해 주세요"
                   />
                 </label>
                 <label className="space-y-2 text-sm font-semibold text-slate-800">
-                  Display name
+                  표시 이름
                   <input
                     className="field"
                     value={snapshot.account.displayName}
                     onChange={(event) =>
                       updateAccount("displayName", event.target.value)
                     }
-                    placeholder="How teammates will see you"
+                    placeholder="팀원에게 보이는 이름"
                   />
                 </label>
                 <label className="space-y-2 text-sm font-semibold text-slate-800 md:col-span-2">
-                  Campus
+                  캠퍼스
                   <input
                     className="field"
                     value={snapshot.account.campus}
                     onChange={(event) => updateAccount("campus", event.target.value)}
-                    placeholder="Optional until identity contracts merge"
+                    placeholder="identity 계약 머지 전까지는 선택 입력"
                   />
                 </label>
               </div>
@@ -387,7 +386,7 @@ export function OnboardingSurvey({ entry }: OnboardingSurveyProps) {
                   onClick={handleAccountContinue}
                   className="button-primary"
                 >
-                  Save and continue
+                  저장하고 계속하기
                 </button>
                 <button
                   type="button"
@@ -397,7 +396,7 @@ export function OnboardingSurvey({ entry }: OnboardingSurveyProps) {
                   }}
                   className="button-secondary"
                 >
-                  Skip to interests
+                  관심사 선택으로 건너뛰기
                 </button>
               </div>
             </>
@@ -406,14 +405,14 @@ export function OnboardingSurvey({ entry }: OnboardingSurveyProps) {
           {currentStep === "interests" ? (
             <>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-                Step 2
+                2단계
               </p>
               <h2 className="mt-2 text-2xl font-semibold text-slate-950">
-                Pick your keywords
+                관심 키워드를 골라 주세요
               </h2>
               <p className="mt-3 text-sm leading-7 text-[color:var(--muted)]">
-                These selections map directly to the Phase 1
-                `interestKeywords` contract and are normalized in the adapter.
+                여기서 고른 항목은 1단계 `interestKeywords` 계약에 맞춰
+                adapter에서 정리되어 저장됩니다.
               </p>
 
               <div className="mt-6 flex flex-wrap gap-3">
@@ -425,10 +424,10 @@ export function OnboardingSurvey({ entry }: OnboardingSurveyProps) {
                       type="button"
                       key={keyword}
                       onClick={() => toggleKeyword(keyword)}
-                      className={`rounded-full px-4 py-3 text-sm font-semibold ${
+                      className={`rounded-full px-4 py-3 text-sm font-semibold transition duration-200 hover:-translate-y-1 hover:shadow-[0_14px_28px_rgba(16,35,58,0.12)] ${
                         active
-                          ? "bg-slate-950 text-white"
-                          : "border border-slate-200/80 bg-white/84 text-slate-700"
+                          ? "bg-slate-950 text-white hover:bg-slate-900"
+                          : "border border-slate-200/80 bg-white/84 text-slate-700 hover:border-slate-300 hover:bg-white hover:text-slate-950"
                       }`}
                     >
                       #{keyword}
@@ -442,14 +441,14 @@ export function OnboardingSurvey({ entry }: OnboardingSurveyProps) {
                   className="field"
                   value={customKeyword}
                   onChange={(event) => setCustomKeyword(event.target.value)}
-                  placeholder="Add your own keyword"
+                  placeholder="직접 키워드 추가"
                 />
                 <button
                   type="button"
                   onClick={addCustomKeyword}
                   className="button-secondary"
                 >
-                  Add keyword
+                  키워드 추가
                 </button>
               </div>
 
@@ -462,14 +461,14 @@ export function OnboardingSurvey({ entry }: OnboardingSurveyProps) {
                   }}
                   className="button-secondary"
                 >
-                  Back
+                  이전
                 </button>
                 <button
                   type="button"
                   onClick={handleInterestContinue}
                   className="button-primary"
                 >
-                  Continue to profile
+                  프로필 단계로 계속하기
                 </button>
               </div>
             </>
@@ -478,31 +477,30 @@ export function OnboardingSurvey({ entry }: OnboardingSurveyProps) {
           {currentStep === "profile" ? (
             <>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-                Step 3
+                3단계
               </p>
               <h2 className="mt-2 text-2xl font-semibold text-slate-950">
-                Finish the onboarding shell
+                프로필 설정을 마무리해 주세요
               </h2>
               <p className="mt-3 text-sm leading-7 text-[color:var(--muted)]">
-                These fields are intentionally branch-local placeholders so this
-                survey branch does not lock the final profile shape before the
-                profile contract work lands.
+                이 입력값은 프로필 계약이 확정되기 전까지 브랜치 로컬에서만 사용하는
+                임시 항목입니다.
               </p>
 
               <div className="mt-6 grid gap-4">
                 <label className="space-y-2 text-sm font-semibold text-slate-800">
-                  Short intro
+                  한 줄 소개
                   <textarea
                     className="field textarea"
                     value={snapshot.profile.intro}
                     onChange={(event) => updateProfile("intro", event.target.value)}
-                    placeholder="What kind of teammate are you?"
+                    placeholder="어떤 팀원인지 짧게 소개해 주세요"
                   />
                 </label>
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <label className="space-y-2 text-sm font-semibold text-slate-800">
-                    Collaboration style
+                    협업 스타일
                     <select
                       className="field"
                       value={snapshot.profile.collaborationStyle}
@@ -510,14 +508,14 @@ export function OnboardingSurvey({ entry }: OnboardingSurveyProps) {
                         updateProfile("collaborationStyle", event.target.value)
                       }
                     >
-                      <option value="">Select one</option>
-                      <option value="async-first">Async-first</option>
-                      <option value="hybrid">Hybrid</option>
-                      <option value="live-sprint">Live sprint</option>
+                      <option value="">하나를 선택해 주세요</option>
+                      <option value="async-first">비동기 중심</option>
+                      <option value="hybrid">하이브리드</option>
+                      <option value="live-sprint">실시간 스프린트</option>
                     </select>
                   </label>
                   <label className="space-y-2 text-sm font-semibold text-slate-800">
-                    Weekly hours
+                    주간 가능 시간
                     <select
                       className="field"
                       value={snapshot.profile.weeklyHours}
@@ -525,11 +523,11 @@ export function OnboardingSurvey({ entry }: OnboardingSurveyProps) {
                         updateProfile("weeklyHours", event.target.value)
                       }
                     >
-                      <option value="">Select one</option>
-                      <option value="under-3">Under 3 hours</option>
-                      <option value="3-6">3 to 6 hours</option>
-                      <option value="6-10">6 to 10 hours</option>
-                      <option value="10-plus">10+ hours</option>
+                      <option value="">하나를 선택해 주세요</option>
+                      <option value="under-3">3시간 미만</option>
+                      <option value="3-6">3시간에서 6시간</option>
+                      <option value="6-10">6시간에서 10시간</option>
+                      <option value="10-plus">10시간 이상</option>
                     </select>
                   </label>
                 </div>
@@ -544,14 +542,14 @@ export function OnboardingSurvey({ entry }: OnboardingSurveyProps) {
                   }}
                   className="button-secondary"
                 >
-                  Back
+                  이전
                 </button>
                 <button
                   type="button"
                   onClick={handleProfileComplete}
                   className="button-primary"
                 >
-                  Mark onboarding complete
+                  온보딩 완료하기
                 </button>
               </div>
             </>
@@ -560,39 +558,38 @@ export function OnboardingSurvey({ entry }: OnboardingSurveyProps) {
           {currentStep === "complete" ? (
             <>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-                Complete
+                완료
               </p>
               <h2 className="mt-2 text-2xl font-semibold text-slate-950">
-                You reached the completion state
+                온보딩이 완료되었습니다
               </h2>
               <p className="mt-3 text-sm leading-7 text-[color:var(--muted)]">
-                The local adapter has set `status=completed` and
-                `currentStep=complete`, matching the downstream Phase 1 contract
-                behavior.
+                로컬 adapter가 `status=completed`와 `currentStep=complete`를
+                반영해 1단계 계약 흐름과 같은 형태로 마무리했습니다.
               </p>
 
               <div className="mt-6 grid gap-4 md:grid-cols-2">
                 <div className="rounded-[1.4rem] border border-white/65 bg-white/82 p-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
-                    Display name
+                    표시 이름
                   </p>
                   <p className="mt-2 font-semibold text-slate-950">
-                    {snapshot.account.displayName || "Not set"}
+                    {snapshot.account.displayName || "미입력"}
                   </p>
                 </div>
                 <div className="rounded-[1.4rem] border border-white/65 bg-white/82 p-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
-                    Completed at
+                    완료 시각
                   </p>
                   <p className="mt-2 font-semibold text-slate-950">
-                    {snapshot.onboarding.completedAt ?? "Not completed"}
+                    {snapshot.onboarding.completedAt ?? "아직 완료되지 않았습니다"}
                   </p>
                 </div>
               </div>
 
               <div className="mt-4 rounded-[1.4rem] border border-white/65 bg-white/82 p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
-                  Selected keywords
+                  선택한 키워드
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {snapshot.onboarding.interestKeywords.map((keyword) => (
@@ -615,8 +612,11 @@ export function OnboardingSurvey({ entry }: OnboardingSurveyProps) {
                   }}
                   className="button-secondary"
                 >
-                  Edit profile step
+                  프로필 단계 다시 보기
                 </button>
+                <Link href="/" className="button-secondary">
+                  둘러보기
+                </Link>
                 <button
                   type="button"
                   onClick={() => {
@@ -625,7 +625,7 @@ export function OnboardingSurvey({ entry }: OnboardingSurveyProps) {
                   }}
                   className="button-primary"
                 >
-                  Start over
+                  처음부터 다시 시작
                 </button>
               </div>
             </>
@@ -641,44 +641,42 @@ export function OnboardingSurvey({ entry }: OnboardingSurveyProps) {
         <div className="space-y-6">
           <div className="panel rounded-[1.8rem] p-5 sm:p-6">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-              Contract Mapping
+              계약 연결 포인트
             </p>
             <h2 className="mt-2 text-2xl font-semibold text-slate-950">
-              What will swap after merge
+              계약 브랜치 머지 후 교체될 부분
             </h2>
             <ul className="mt-5 space-y-3 text-sm leading-7 text-[color:var(--muted)]">
               <li className="rounded-[1.25rem] bg-white/82 px-4 py-3">
-                Account step will call `POST /api/auth/signup` instead of saving
-                local draft state.
+                계정 단계는 로컬 저장 대신 `POST /api/auth/signup` 호출로 바뀝니다.
               </li>
               <li className="rounded-[1.25rem] bg-white/82 px-4 py-3">
-                Resume flow will read `GET /api/onboarding/state` instead of local
-                storage.
+                이어하기 흐름은 localStorage 대신 `GET /api/onboarding/state`를 읽게 됩니다.
               </li>
               <li className="rounded-[1.25rem] bg-white/82 px-4 py-3">
-                Interest updates will map to `PUT /api/onboarding/state` with
-                `interestKeywords` and `currentStep`.
+                관심사 업데이트는 `interestKeywords`, `currentStep`를 담아
+                `PUT /api/onboarding/state`로 연결됩니다.
               </li>
               <li className="rounded-[1.25rem] bg-white/82 px-4 py-3">
-                Temporary profile draft fields remain branch-local until the
-                profile contract branch defines shared shapes.
+                임시 프로필 입력 필드는 프로필 계약 브랜치에서 공용 shape가 정해질 때까지
+                브랜치 로컬로 유지됩니다.
               </li>
             </ul>
           </div>
 
           <div className="panel rounded-[1.8rem] p-5 sm:p-6">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-              Quick Links
+              바로가기
             </p>
             <div className="mt-5 flex flex-col gap-3">
               <Link href="/" className="button-secondary">
-                Back to home
+                홈으로 돌아가기
               </Link>
               <Link href="/signup" className="button-secondary">
-                Back to signup
+                회원가입으로 돌아가기
               </Link>
               <Link href="/onboarding" className="button-secondary">
-                Resume onboarding
+                온보딩 이어하기
               </Link>
             </div>
           </div>
