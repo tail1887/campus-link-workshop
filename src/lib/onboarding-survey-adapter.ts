@@ -36,6 +36,8 @@ export type SurveySnapshot = {
   profile: SurveyProfileDraft;
 };
 
+export type SurveyEntry = "signup" | "onboarding";
+
 const STORAGE_KEY = "campus-link.p1.onboarding-survey.v1";
 
 const emptyAccount: SurveyAccountDraft = {
@@ -124,6 +126,20 @@ export function loadSurveySnapshot() {
   }
 }
 
+export function loadSurveySnapshotForEntry(entry: SurveyEntry) {
+  const snapshot = loadSurveySnapshot();
+
+  if (
+    entry === "onboarding" &&
+    snapshot.onboarding.status === "not_started" &&
+    snapshot.onboarding.currentStep === "account"
+  ) {
+    return beginOnboardingSurvey();
+  }
+
+  return snapshot;
+}
+
 export function saveAccountDraft(account: SurveyAccountDraft) {
   const current = loadSurveySnapshot();
   const next: SurveySnapshot = {
@@ -168,6 +184,25 @@ export function saveProfileDraft(profile: SurveyProfileDraft) {
       status: "completed",
       currentStep: "complete",
       completedAt: nowIso(),
+      updatedAt: nowIso(),
+    },
+  };
+
+  writeSnapshot(next);
+  return next;
+}
+
+export function beginOnboardingSurvey() {
+  const current = loadSurveySnapshot();
+  const next: SurveySnapshot = {
+    ...current,
+    onboarding: {
+      ...current.onboarding,
+      status: current.onboarding.status === "completed" ? "completed" : "in_progress",
+      currentStep:
+        current.onboarding.currentStep === "account"
+          ? "interests"
+          : current.onboarding.currentStep,
       updatedAt: nowIso(),
     },
   };

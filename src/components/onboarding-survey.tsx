@@ -3,13 +3,15 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
+  beginOnboardingSurvey,
   goToStep,
-  loadSurveySnapshot,
+  loadSurveySnapshotForEntry,
   resetSurveySnapshot,
   saveAccountDraft,
   saveInterestKeywords,
   saveProfileDraft,
   type SurveyAccountDraft,
+  type SurveyEntry,
   type SurveyOnboardingStep,
   type SurveyProfileDraft,
   type SurveySnapshot,
@@ -35,28 +37,30 @@ const stepMeta: Array<{
   label: string;
   title: string;
 }> = [
-  { step: "account", label: "Step 01", title: "Account" },
+  { step: "account", label: "Step 01", title: "Account Ready" },
   { step: "interests", label: "Step 02", title: "Interests" },
   { step: "profile", label: "Step 03", title: "Profile" },
   { step: "complete", label: "Done", title: "Complete" },
 ];
 
 type OnboardingSurveyProps = {
-  entry: "signup" | "onboarding";
+  entry: SurveyEntry;
 };
 
 export function OnboardingSurvey({ entry }: OnboardingSurveyProps) {
-  const [snapshot, setSnapshot] = useState<SurveySnapshot | null>(null);
+  const [snapshot, setSnapshot] = useState<SurveySnapshot | null>(() =>
+    loadSurveySnapshotForEntry(entry),
+  );
   const [customKeyword, setCustomKeyword] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const sync = () => setSnapshot(loadSurveySnapshot());
+    const sync = () => setSnapshot(loadSurveySnapshotForEntry(entry));
 
     sync();
     window.addEventListener("storage", sync);
     return () => window.removeEventListener("storage", sync);
-  }, []);
+  }, [entry]);
 
   if (!snapshot) {
     return null;
@@ -223,14 +227,15 @@ export function OnboardingSurvey({ entry }: OnboardingSurveyProps) {
               then tune your fit.
             </h1>
             <p className="section-subtitle">
-              This flow follows the Phase 1 onboarding contract: account,
-              interests, profile, and complete. Until the identity contract
-              branch merges, it stores survey progress in a branch-local adapter
-              so we can ship the UI without freezing shared auth shapes.
+              This flow follows the Phase 1 onboarding contract. After signup,
+              onboarding starts from interests and profile setup, while the
+              account step stays available as a lightweight confirmation shell
+              until the identity contract branch merges.
             </p>
             <div className="info-grid">
               {[
-                "Signup step only captures the minimum account fields.",
+                "Signup moves straight into onboarding instead of repeating registration.",
+                "Account details remain a lightweight local confirmation step.",
                 "Keyword choices map to onboarding.interestKeywords.",
                 "Completion flips the local onboarding status to completed.",
                 "Temporary profile answers stay branch-local on purpose.",
@@ -327,11 +332,11 @@ export function OnboardingSurvey({ entry }: OnboardingSurveyProps) {
                 Step 1
               </p>
               <h2 className="mt-2 text-2xl font-semibold text-slate-950">
-                Create the signup draft
+                Confirm your account setup
               </h2>
               <p className="mt-3 text-sm leading-7 text-[color:var(--muted)]">
-                This mirrors the Phase 1 signup contract without hard-coding the
-                final shared auth payload on `main`.
+                This step stays as a lightweight bridge for the Phase 1 contract.
+                If you arrived from signup, you can skip straight to interests.
               </p>
               <div className="mt-6 grid gap-4 md:grid-cols-2">
                 <label className="space-y-2 text-sm font-semibold text-slate-800 md:col-span-2">
@@ -382,7 +387,17 @@ export function OnboardingSurvey({ entry }: OnboardingSurveyProps) {
                   onClick={handleAccountContinue}
                   className="button-primary"
                 >
-                  Continue to interests
+                  Save and continue
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSnapshot(beginOnboardingSurvey());
+                    setError("");
+                  }}
+                  className="button-secondary"
+                >
+                  Skip to interests
                 </button>
               </div>
             </>
@@ -660,10 +675,10 @@ export function OnboardingSurvey({ entry }: OnboardingSurveyProps) {
                 Back to home
               </Link>
               <Link href="/signup" className="button-secondary">
-                Open signup survey
+                Back to signup
               </Link>
               <Link href="/onboarding" className="button-secondary">
-                Open onboarding resume
+                Resume onboarding
               </Link>
             </div>
           </div>
