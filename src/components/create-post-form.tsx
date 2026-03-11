@@ -213,7 +213,7 @@ export function CreatePostForm() {
           <button
             type="button"
             onClick={() => setDraft(sampleDraft)}
-            className="rounded-full border border-slate-200/80 bg-white/84 px-4 py-2 text-sm font-semibold text-slate-700"
+            className="button-ghost px-4 py-2 text-sm"
           >
             샘플 자동 입력
           </button>
