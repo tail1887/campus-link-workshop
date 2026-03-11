@@ -62,11 +62,11 @@ const initialDraft = (): DraftState => ({
 
 const sampleDraft: DraftState = {
   category: "project",
-  title: "캠퍼스 네트워킹 앱 데모 팀원 모집",
+  title: "캠퍼스 네트워킹 앱 팀원 모집",
   campus: "판교 캠퍼스",
-  summary: "2주 안에 온보딩부터 데모까지 완성할 집중형 프로젝트입니다.",
+  summary: "2주 안에 핵심 기능 출시를 목표로 하는 집중형 프로젝트입니다.",
   description:
-    "발표용으로도 잘 보이는 웹 서비스 데모를 빠르게 완성하려고 합니다. 프론트엔드 1명, 백엔드 1명, 기획/디자인 1명을 추가 모집합니다.",
+    "캠퍼스 생활을 더 편하게 만드는 네트워킹 서비스를 빠르게 출시하려고 합니다. 프론트엔드 1명, 백엔드 1명, 기획/디자인 1명을 추가 모집합니다.",
   rolesText: "Frontend, Backend, Product Designer",
   techStackText: "Next.js, TypeScript, Tailwind CSS, Node.js",
   capacity: "3",
@@ -76,7 +76,7 @@ const sampleDraft: DraftState = {
   ownerRole: "PM / Frontend",
   meetingStyle: "오프라인 중심",
   schedule: "평일 저녁 3회 + 주말 스프린트 1회",
-  goal: "Vercel 배포까지 마친 발표용 서비스 완성",
+  goal: "Vercel 배포까지 마친 서비스 MVP 완성",
 };
 
 function parseCommaSeparatedText(value: string) {
@@ -136,7 +136,7 @@ function toPreviewPost(draft: DraftState): RecruitPost {
       "정기 참여가 가능한 팀원",
       "문서화와 커뮤니케이션에 적극적인 팀원",
     ],
-    perks: ["발표 가능한 데모 완성", "포트폴리오용 결과물 확보"],
+    perks: ["배포 가능한 결과물 확보", "포트폴리오용 프로젝트 경험"],
   };
 }
 
@@ -355,7 +355,7 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
         ownerRole: draft.ownerRole.trim() || "프로젝트 리드",
         meetingStyle: draft.meetingStyle.trim() || "온·오프라인 혼합",
         schedule: draft.schedule.trim() || "세부 일정 협의",
-        goal: draft.goal.trim() || "데모 완성",
+        goal: draft.goal.trim() || "서비스 MVP 완성",
         ownerId: currentUser.id,
       };
 
@@ -410,9 +410,9 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
       <form onSubmit={submit} className="panel rounded-[1.8rem] p-5 sm:p-6">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-              Write Form
-            </p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
+                Write Form
+              </p>
             <h2 className="mt-2 text-2xl font-semibold text-slate-950">
               모집글 입력
             </h2>
@@ -421,12 +421,12 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
             type="button"
             onClick={() => {
               setDraft(sampleDraft);
-              setNotice("샘플 draft를 불러왔습니다. 필요하면 바로 AI 추천을 생성해보세요.");
+              setNotice("예시 내용을 불러왔습니다. 필요하면 바로 AI 추천을 생성해보세요.");
               setError("");
             }}
             className="button-ghost px-4 py-2 text-sm"
           >
-            샘플 자동 입력
+            예시 자동 입력
           </button>
         </div>
 
@@ -463,7 +463,7 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
               value={draft.title}
               onChange={(event) => updateField("title", event.target.value)}
               className="field"
-              placeholder="예: AI 서비스 데모 팀원 모집"
+              placeholder="예: AI 서비스 팀원 모집"
             />
           </label>
 
@@ -588,7 +588,7 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
               value={draft.goal}
               onChange={(event) => updateField("goal", event.target.value)}
               className="field"
-              placeholder="예: 3주 안에 배포 가능한 데모 완성"
+              placeholder="예: 3주 안에 배포 가능한 서비스 MVP 완성"
             />
           </label>
 
@@ -668,7 +668,7 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
               추천 3종 한 번에 적용
             </button>
             <p className="text-sm leading-7 text-[color:var(--muted)]">
-              shared suggestion job API가 현재 draft를 읽어 제목, 요약, 설명 초안을 생성합니다.
+              현재 입력 내용을 바탕으로 제목, 요약, 설명 초안을 생성합니다.
             </p>
           </div>
 

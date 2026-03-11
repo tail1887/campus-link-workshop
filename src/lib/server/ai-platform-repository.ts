@@ -25,14 +25,6 @@ import type {
 } from "@/types/ai";
 import type { User } from "@/types/identity";
 
-function assertDatabaseConfigured() {
-  if (!process.env.DATABASE_URL) {
-    throw new Error(
-      "DATABASE_URL is required when RECRUIT_DATA_SOURCE=database.",
-    );
-  }
-}
-
 export async function getGitHubConnectionRecord(user: User) {
   if (getIdentityDataSource() !== "database") {
     return getMockGitHubConnectionRecord(user);
@@ -40,10 +32,7 @@ export async function getGitHubConnectionRecord(user: User) {
 
   return withRepositoryFallback({
     scope: "ai-platform.getGitHubConnectionRecord",
-    database: async () => {
-      assertDatabaseConfigured();
-      return getPrismaGitHubConnectionRecord(user);
-    },
+    database: () => getPrismaGitHubConnectionRecord(user),
     mock: () => getMockGitHubConnectionRecord(user),
   });
 }
@@ -58,10 +47,7 @@ export async function upsertGitHubConnectionRecord(
 
   return withRepositoryFallback({
     scope: "ai-platform.upsertGitHubConnectionRecord",
-    database: async () => {
-      assertDatabaseConfigured();
-      return upsertPrismaGitHubConnectionRecord(user, input);
-    },
+    database: () => upsertPrismaGitHubConnectionRecord(user, input),
     mock: () => upsertMockGitHubConnectionRecord(user, input),
   });
 }
@@ -73,10 +59,7 @@ export async function disconnectGitHubConnectionRecord(user: User) {
 
   return withRepositoryFallback({
     scope: "ai-platform.disconnectGitHubConnectionRecord",
-    database: async () => {
-      assertDatabaseConfigured();
-      return disconnectPrismaGitHubConnectionRecord(user);
-    },
+    database: () => disconnectPrismaGitHubConnectionRecord(user),
     mock: () => disconnectMockGitHubConnectionRecord(user),
   });
 }
@@ -91,10 +74,7 @@ export async function createGitHubAnalysisJobRecord(
 
   return withRepositoryFallback({
     scope: "ai-platform.createGitHubAnalysisJobRecord",
-    database: async () => {
-      assertDatabaseConfigured();
-      return createPrismaGitHubAnalysisJobRecord(user, input);
-    },
+    database: () => createPrismaGitHubAnalysisJobRecord(user, input),
     mock: () => createMockGitHubAnalysisJobRecord(user, input),
   });
 }
@@ -106,10 +86,7 @@ export async function getGitHubAnalysisJobRecord(user: User, jobId: string) {
 
   return withRepositoryFallback({
     scope: "ai-platform.getGitHubAnalysisJobRecord",
-    database: async () => {
-      assertDatabaseConfigured();
-      return getPrismaGitHubAnalysisJobRecord(user, jobId);
-    },
+    database: () => getPrismaGitHubAnalysisJobRecord(user, jobId),
     mock: () => getMockGitHubAnalysisJobRecord(user, jobId),
   });
 }
@@ -124,10 +101,7 @@ export async function createAiSuggestionJobRecord(
 
   return withRepositoryFallback({
     scope: "ai-platform.createAiSuggestionJobRecord",
-    database: async () => {
-      assertDatabaseConfigured();
-      return createPrismaAiSuggestionJobRecord(user, request);
-    },
+    database: () => createPrismaAiSuggestionJobRecord(user, request),
     mock: () => createMockAiSuggestionJobRecord(user, request),
   });
 }
@@ -139,10 +113,7 @@ export async function getAiSuggestionJobRecord(user: User, jobId: string) {
 
   return withRepositoryFallback({
     scope: "ai-platform.getAiSuggestionJobRecord",
-    database: async () => {
-      assertDatabaseConfigured();
-      return getPrismaAiSuggestionJobRecord(user, jobId);
-    },
+    database: () => getPrismaAiSuggestionJobRecord(user, jobId),
     mock: () => getMockAiSuggestionJobRecord(user, jobId),
   });
 }

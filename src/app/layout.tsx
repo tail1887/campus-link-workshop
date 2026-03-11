@@ -19,7 +19,7 @@ const displayFont = Space_Grotesk({
 export const metadata: Metadata = {
   title: "Campus Link",
   description:
-    "캠퍼스 스터디와 프로젝트 팀원을 빠르게 찾고 연결하는 발표용 매칭 플랫폼",
+    "캠퍼스 스터디와 프로젝트 팀원을 빠르게 찾고 연결하는 팀 매칭 플랫폼",
 };
 
 export default function RootLayout({
