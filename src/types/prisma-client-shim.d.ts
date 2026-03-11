@@ -59,5 +59,14 @@ declare module "@prisma/client" {
       findUnique(args: unknown): Promise<any>;
       upsert(args: unknown): Promise<any>;
     };
+    githubConnection: {
+      findUnique(args: unknown): Promise<any>;
+      upsert(args: unknown): Promise<any>;
+    };
+    aiJob: {
+      findUnique(args: unknown): Promise<any>;
+      create(args: unknown): Promise<any>;
+      update(args: unknown): Promise<any>;
+    };
   }
 }
