@@ -88,6 +88,13 @@ export function buildProfileShellViewModel(input: {
         ...(role === "student"
           ? [
               {
+                title: "Resume Workspace",
+                description:
+                  "기본 이력서 편집, completeness 확인, profile-linked helper가 연결될 Phase 2 C 진입점",
+                state: "phase-2-track",
+                href: "/resume",
+              },
+              {
                 title: "Communication Center",
                 description:
                   "문의하기, 알림 설정, 사용자 커뮤니케이션 로그가 연결될 Phase 2 D 슬롯",
@@ -161,6 +168,13 @@ export function buildProfileShellViewModel(input: {
             title: "Growth Modules",
             description: "추가 인증, 이력서, GitHub, 알림 설정이 이어질 모듈 그리드",
             state: "future-bridge",
+          },
+          {
+            title: "Resume Workspace",
+            description:
+              "기본 이력서 편집, completeness, profile-linked helper를 다루는 Phase 2 C 워크스페이스",
+            state: "phase-2-track",
+            href: "/resume",
           },
           {
             title: "Communication Center",
