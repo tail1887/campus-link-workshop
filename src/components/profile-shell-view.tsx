@@ -52,8 +52,8 @@ export function ProfileShellView({ model }: ProfileShellViewProps) {
         </div>
 
         <div className="grid gap-4">
-          {model.modules.map((module) => (
-            <div key={module.title} className="panel rounded-[1.8rem] p-5">
+          {model.modules.map((module) => {
+            const content = (
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="text-lg font-semibold text-slate-950">
@@ -67,8 +67,26 @@ export function ProfileShellView({ model }: ProfileShellViewProps) {
                   {module.state}
                 </span>
               </div>
-            </div>
-          ))}
+            );
+
+            if (module.href) {
+              return (
+                <Link
+                  key={module.title}
+                  href={module.href}
+                  className="panel rounded-[1.8rem] p-5"
+                >
+                  {content}
+                </Link>
+              );
+            }
+
+            return (
+              <div key={module.title} className="panel rounded-[1.8rem] p-5">
+                {content}
+              </div>
+            );
+          })}
         </div>
       </section>
 
