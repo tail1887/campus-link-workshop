@@ -15,6 +15,18 @@
 - [ ] `npm run lint`
 - [ ] `npm run build`
 
+### Automated Tests Added or Updated
+
+- 
+
+### Manual Smoke Checks
+
+- 
+
+### Still Needs Human or Browser Verification
+
+- 
+
 ## Docs Sync
 
 - [ ] No docs change needed

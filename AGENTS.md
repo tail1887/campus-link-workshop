@@ -18,6 +18,7 @@ Supplemental operational guide:
 
 - `docs/05-codex-collaboration-playbook.md` is a Codex-team execution guide.
 - It does not override `docs/01` through `docs/04`; it helps teammates apply them consistently.
+- `docs/06-testing-playbook.md` is the Codex-first testing guide for branch-scoped automated and manual verification.
 
 ## How Codex Should Work In This Repo
 

@@ -90,6 +90,7 @@ npm run build
 - [API 문서](docs/03-api-reference.md)
 - [개발 가이드](docs/04-development-guide.md)
 - [Codex 협업 플레이북](docs/05-codex-collaboration-playbook.md)
+- [테스트 플레이북](docs/06-testing-playbook.md)
 
 ## 트러블슈팅 / 배운 점
 
