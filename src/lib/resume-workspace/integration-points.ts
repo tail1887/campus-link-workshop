@@ -18,54 +18,54 @@ export const resumeAiReplacementPoints: ResumeAiReplacementPoint[] = [
     id: "resume-summary-assist",
     title: "Summary Assist Slot",
     description:
-      "Replace the static summary guidance with suggestion preview and apply actions that write back into the summary field.",
+      "Summary suggestions now preview the current draft against AI-generated copy and can write back into the summary field.",
     target: "summary",
     replaceWhen:
-      "feature/p3-resume-ai-assist wires shared AI suggestion responses into the summary editor.",
+      "Integrated in ResumeWorkspaceReady through the shared AI suggestion job flow and summary draft apply handler.",
   },
   {
     id: "resume-skills-normalizer",
     title: "Skills Assist Slot",
     description:
-      "Replace manual skill cleanup with AI-assisted normalization and ranking using the current resume draft as input.",
+      "Skills suggestions now preview merged keyword sets and can normalize the current skills draft without changing the Phase 2 resume shape.",
     target: "skills",
     replaceWhen:
-      "feature/p3-resume-ai-assist adds skill suggestion chips and apply-to-draft handlers.",
+      "Integrated in ResumeWorkspaceReady through the shared AI suggestion job flow and skill merge apply handler.",
   },
   {
     id: "resume-experience-bullet-rewrite",
     title: "Experience Rewrite Slot",
     description:
-      "Attach per-entry bullet refinement or rewrite actions to each experience card without changing the stored Phase 2 resume shape.",
+      "Selected experience entries now request AI rewrites and apply the returned copy back into the existing textarea-backed draft.",
     target: "experience",
     replaceWhen:
-      "feature/p3-resume-ai-assist introduces item-level suggestion panels for experience entries.",
+      "Integrated in ResumeWorkspaceReady through selected experience context and per-entry apply handlers.",
   },
   {
     id: "resume-project-story-assist",
     title: "Project Story Slot",
     description:
-      "Attach suggestion and apply controls for project description and tech stack framing on each project card.",
+      "Selected project entries now request AI story suggestions and apply the returned copy back into the current project description draft.",
     target: "projects",
     replaceWhen:
-      "feature/p3-resume-ai-assist connects project-level AI output to the existing draft update handlers.",
+      "Integrated in ResumeWorkspaceReady through selected project context and per-entry apply handlers.",
   },
   {
     id: "resume-profile-context-provider",
     title: "Profile Context Slot",
     description:
-      "Promote the current profile snapshot and onboarding keywords into an explicit AI context block instead of a read-only helper panel.",
+      "Profile headline, open roles, and onboarding keywords now appear inside the AI request panel as explicit suggestion context.",
     target: "profile_context",
     replaceWhen:
-      "feature/p3-resume-ai-assist consumes profile-linked context alongside the resume draft.",
+      "Integrated in ResumeWorkspaceReady through the AI context panel and request builder.",
   },
   {
     id: "resume-full-review-panel",
     title: "Full Resume Review Slot",
     description:
-      "Replace the handoff note panel with an AI review surface that reads the same completeness and draft payload already used in this branch.",
+      "The workspace now includes a full-review AI target that reads the same draft snapshot and completeness-driven context used elsewhere in the editor.",
     target: "full_resume",
     replaceWhen:
-      "feature/p3-resume-ai-assist ships the end-to-end suggestion preview and apply workflow.",
+      "Integrated in ResumeWorkspaceReady through the shared AI suggestion job flow and review-only suggestion panel.",
   },
 ];
