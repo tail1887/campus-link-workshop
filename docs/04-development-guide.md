@@ -173,4 +173,4 @@
 - [x] 브랜치 / 커밋 / PR 규칙 문서화
 - [x] GitHub 저장소 생성 및 첫 push
 - [x] GitHub Secrets 등록
-- [ ] main 브랜치 보호 규칙 적용
+- [x] main 브랜치 보호 규칙 적용
