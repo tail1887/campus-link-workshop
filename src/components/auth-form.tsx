@@ -11,11 +11,13 @@ import type {
   ApiError,
   ApiSuccess,
   AuthContextPayload,
+  IdentityDataSource,
 } from "@/types/identity";
 
 type AuthFormProps = {
   mode: AuthEntryMode;
   nextPath?: string;
+  dataSource: IdentityDataSource;
 };
 
 const copyByMode = {
@@ -41,7 +43,7 @@ const copyByMode = {
   },
 } as const;
 
-export function AuthForm({ mode, nextPath }: AuthFormProps) {
+export function AuthForm({ mode, nextPath, dataSource }: AuthFormProps) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -51,6 +53,20 @@ export function AuthForm({ mode, nextPath }: AuthFormProps) {
   const [isPending, startTransition] = useTransition();
   const copy = copyByMode[mode];
   const resolvedNextPath = nextPath || getDefaultAuthEntryNextPath(mode);
+  const loginEmailPlaceholder =
+    mode === "login" && dataSource === "mock"
+      ? "student@campus-link.demo"
+      : "you@example.com";
+  const loginPasswordPlaceholder =
+    mode === "login" && dataSource === "mock" ? "jungle1234" : "비밀번호 입력";
+  const helperMessage =
+    mode === "login"
+      ? dataSource === "mock"
+        ? "로그인 demo 계정: student@campus-link.demo / jungle1234"
+        : "database 모드에서는 먼저 회원가입으로 계정을 만든 뒤 로그인하세요."
+      : dataSource === "mock"
+        ? "회원가입 없이 빠른 시연이 필요하면 demo 계정으로도 흐름을 확인할 수 있습니다."
+        : "회원가입이 완료되면 온보딩 설문으로 이어집니다.";
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -135,7 +151,7 @@ export function AuthForm({ mode, nextPath }: AuthFormProps) {
               className="field"
               placeholder={
                 mode === "login"
-                  ? "student@campus-link.demo"
+                  ? loginEmailPlaceholder
                   : "new-user@example.com"
               }
               required
@@ -148,7 +164,9 @@ export function AuthForm({ mode, nextPath }: AuthFormProps) {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               className="field"
-              placeholder={mode === "login" ? "jungle1234" : "8자 이상 입력"}
+              placeholder={
+                mode === "login" ? loginPasswordPlaceholder : "8자 이상 입력"
+              }
               required
             />
           </label>
@@ -178,10 +196,16 @@ export function AuthForm({ mode, nextPath }: AuthFormProps) {
         </div>
 
         <div className="mt-5 rounded-[1.25rem] bg-slate-50 px-4 py-3 text-sm leading-7 text-[color:var(--muted)]">
-          로그인 demo 계정:{" "}
-          <span className="font-semibold text-slate-900">
-            student@campus-link.demo / jungle1234
-          </span>
+          {dataSource === "mock" && mode === "login" ? (
+            <>
+              로그인 demo 계정:{" "}
+              <span className="font-semibold text-slate-900">
+                student@campus-link.demo / jungle1234
+              </span>
+            </>
+          ) : (
+            helperMessage
+          )}
         </div>
 
         {error ? (
