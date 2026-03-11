@@ -6,6 +6,11 @@ import { PostCard } from "@/components/post-card";
 import { addStoredPost } from "@/lib/storage";
 import type { CreateRecruitPostInput, RecruitPost } from "@/types/recruit";
 
+type CurrentUser = {
+  id: string;
+  displayName: string;
+};
+
 type DraftState = {
   category: RecruitPost["category"];
   title: string;
@@ -104,9 +109,16 @@ function toPreviewPost(draft: DraftState): RecruitPost {
   };
 }
 
-export function CreatePostForm() {
+type CreatePostFormProps = {
+  currentUser: CurrentUser;
+};
+
+export function CreatePostForm({ currentUser }: CreatePostFormProps) {
   const router = useRouter();
-  const [draft, setDraft] = useState<DraftState>(initialDraft);
+  const [draft, setDraft] = useState<DraftState>(() => ({
+    ...initialDraft(),
+    ownerName: currentUser.displayName,
+  }));
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
 
@@ -160,6 +172,7 @@ export function CreatePostForm() {
         meetingStyle: draft.meetingStyle.trim() || "온·오프라인 혼합",
         schedule: draft.schedule.trim() || "세부 일정 협의",
         goal: draft.goal.trim() || "데모 완성",
+        ownerId: currentUser.id,
       };
 
       const response = await fetch("/api/posts", {
@@ -191,6 +204,7 @@ export function CreatePostForm() {
         id: result.data.id,
         slug: result.data.slug,
         createdAt: new Date().toISOString(),
+        ownerId: currentUser.id,
       };
 
       addStoredPost(createdPost);

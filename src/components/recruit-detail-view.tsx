@@ -11,12 +11,18 @@ type RecruitDetailViewProps = {
   slug: string;
   initialPost: RecruitPost | null;
   created: boolean;
+  currentUser: {
+    id: string;
+    email: string;
+    displayName: string;
+  } | null;
 };
 
 export function RecruitDetailView({
   slug,
   initialPost,
   created,
+  currentUser,
 }: RecruitDetailViewProps) {
   const [post, setPost] = useState<RecruitPost | null>(initialPost);
   const [hydrated, setHydrated] = useState(false);
@@ -246,7 +252,7 @@ export function RecruitDetailView({
                 </div>
               </div>
             </div>
-            <ApplyPanel post={post} />
+            <ApplyPanel post={post} currentUser={currentUser} />
           </aside>
         </div>
       </section>

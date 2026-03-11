@@ -37,12 +37,26 @@ export async function SiteHeader() {
               프로필 진입
             </Link>
             {authContext.authenticated && authContext.user.role === "student" ? (
-              <Link
-                href="/profile/communication"
-                className="text-sm font-semibold text-[color:var(--muted)] hover:text-slate-950"
-              >
-                문의/알림
-              </Link>
+              <>
+                <Link
+                  href="/profile/recruits"
+                  className="text-sm font-semibold text-[color:var(--muted)] hover:text-slate-950"
+                >
+                  내 모집 글
+                </Link>
+                <Link
+                  href="/profile/applications"
+                  className="text-sm font-semibold text-[color:var(--muted)] hover:text-slate-950"
+                >
+                  내 참가 글
+                </Link>
+                <Link
+                  href="/profile/communication"
+                  className="text-sm font-semibold text-[color:var(--muted)] hover:text-slate-950"
+                >
+                  문의/알림
+                </Link>
+              </>
             ) : null}
           </nav>
 

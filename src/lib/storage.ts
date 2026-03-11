@@ -50,6 +50,10 @@ export function addStoredPost(post: RecruitPost) {
   writeArray(POSTS_KEY, nextPosts);
 }
 
+export function getStoredPostsByOwner(ownerId: string) {
+  return getStoredPosts().filter((post) => post.ownerId === ownerId);
+}
+
 export function getStoredApplications() {
   return readArray<RecruitApplication>(APPLICATIONS_KEY);
 }
@@ -57,4 +61,10 @@ export function getStoredApplications() {
 export function addStoredApplication(application: RecruitApplication) {
   const items = [application, ...getStoredApplications()];
   writeArray(APPLICATIONS_KEY, items);
+}
+
+export function getStoredApplicationsByApplicant(applicantId: string) {
+  return getStoredApplications().filter(
+    (application) => application.applicantId === applicantId,
+  );
 }
