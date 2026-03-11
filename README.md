@@ -1,0 +1,100 @@
+# Campus Link
+
+`Campus Link`는 대학생이 스터디와 프로젝트 팀원을 빠르게 찾고 연결할 수 있도록 만든 발표용 웹 플랫폼입니다.
+
+## 프로젝트 소개
+
+- 프로젝트 한 줄 소개: 캠퍼스 스터디/프로젝트 모집과 지원 흐름을 한 번에 보여주는 매칭 서비스
+- 해결하려는 문제: 흩어진 모집글과 불명확한 팀 정보 때문에 팀원 탐색과 지원이 번거로운 문제
+- 핵심 사용자: 스터디, 공모전, 사이드 프로젝트 팀원을 찾는 대학생
+- 핵심 가치: 빠른 탐색, 선명한 정보 구조, 발표 친화적인 화면 구성
+- 진행 기간 / 팀 규모: 워크숍 MVP / 3~4명 가정
+
+## 기획 의도
+
+- 기존 방식의 불편함: 모집 공고가 여러 커뮤니티와 채팅방에 흩어져 있다.
+- 우리가 해결하려는 핵심 포인트: 모집글 탐색, 상세 확인, 지원하기를 하나의 제품 흐름으로 묶는다.
+- 이번 MVP에서 집중한 가치: 배포 가능한 완성도와 발표 임팩트
+
+## 핵심 기능
+
+- 메인 랜딩 페이지
+- 모집글 목록과 필터링
+- 모집글 상세 보기
+- 글쓰기 mock
+- 지원하기 mock
+
+## 데모 시나리오
+
+1. 사용자는 메인 화면에서 인기 카테고리와 추천 모집글을 확인한다.
+2. 모집글 목록으로 이동해 필터를 적용하고 관심 글을 선택한다.
+3. 상세 화면에서 팀 소개와 모집 역할을 확인한 뒤 mock 지원을 완료한다.
+4. 이어서 새 모집글을 작성하고 생성된 상세 화면까지 시연한다.
+
+## 주요 화면 / 결과물
+
+- 화면 1: 메인 랜딩과 추천 모집 섹션
+- 화면 2: 모집글 목록과 필터 UI
+- 화면 3: 모집글 상세와 지원하기 영역
+- 화면 4: 글쓰기 폼과 생성 결과
+
+## 아키텍처 요약
+
+- 클라이언트: Next.js App Router
+- 서버: Next.js Route Handlers 기반 mock API
+- 데이터 저장소: seed 데이터 + 브라우저 localStorage
+- 인증 / 상태 관리: 인증 없음, 클라이언트 상태 중심
+- 배포 방식: Vercel
+
+## 기술 스택
+
+| 영역 | 사용 기술 |
+| --- | --- |
+| Frontend | Next.js 16, React 19, TypeScript, Tailwind CSS 4 |
+| Backend | Next.js Route Handlers |
+| Database | 없음, mock seed + localStorage |
+| Infra | Vercel |
+| Testing | ESLint, Next build smoke check |
+
+## Quick Start
+
+### 1) 로컬 실행
+
+```bash
+npm install
+npm run dev
+```
+
+- App: `http://localhost:3000`
+- API: `http://localhost:3000/api`
+
+### 2) 검증
+
+```bash
+npm run lint
+npm run build
+```
+
+## 배포 메모
+
+- GitHub 저장소를 Vercel에 Import 하면 바로 배포 가능
+- MVP 기준 별도 환경 변수 없음
+
+## 프로젝트 문서
+
+- [Codex 작업 규칙](AGENTS.md)
+- [협업 가이드](CONTRIBUTING.md)
+- [기획 문서](docs/01-product-planning.md)
+- [아키텍처 문서](docs/02-architecture.md)
+- [API 문서](docs/03-api-reference.md)
+- [개발 가이드](docs/04-development-guide.md)
+
+## 트러블슈팅 / 배운 점
+
+- mock 데이터만으로도 발표 흐름을 완결하려면 UI와 데이터 계약을 먼저 맞추는 것이 중요하다.
+- Vercel 배포를 빠르게 끝내려면 Next.js 기본 구조를 최대한 활용하는 편이 안전하다.
+
+## Known Limitations
+
+- 실제 회원가입, 학교 인증, 실시간 채팅은 아직 없다.
+- localStorage 기반이라 기기나 브라우저를 바꾸면 작성/지원 내역이 공유되지 않는다.
