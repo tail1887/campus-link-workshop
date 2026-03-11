@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 import type { ProfileShellViewModel } from "@/lib/profile-shell/adapter";
 
