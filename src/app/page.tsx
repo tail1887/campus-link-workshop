@@ -1,13 +1,17 @@
 import Link from "next/link";
 import { PostCard } from "@/components/post-card";
+import { getRecruitCreateEntry } from "@/lib/recruit-create-entry";
 import { categoryMeta } from "@/lib/recruit";
+import { getCurrentAuthContext } from "@/lib/server/auth-context";
 import { listRecruitPosts } from "@/lib/server/recruit-repository";
 import type { RecruitPost } from "@/types/recruit";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
+  const authContext = await getCurrentAuthContext();
   const posts: RecruitPost[] = await listRecruitPosts();
+  const createEntry = getRecruitCreateEntry(authContext.authenticated);
   const featuredPosts = posts.filter((post) => post.highlight).slice(0, 3);
   const openRoles = posts.reduce((sum, post) => sum + post.capacity, 0);
   const campusCount = new Set(posts.map((post) => post.campus)).size;
@@ -35,10 +39,13 @@ export default async function HomePage() {
                 모집글 둘러보기
                 <span aria-hidden="true">/</span>
               </Link>
-              <Link href="/recruit/new" className="button-secondary">
-                새 모집글 쓰기
+              <Link href={createEntry.href} className="button-secondary">
+                {createEntry.label}
               </Link>
             </div>
+            <p className="text-sm font-medium text-[color:var(--muted)]">
+              {createEntry.hint}
+            </p>
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="rounded-[1.5rem] border border-white/60 bg-white/78 p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
@@ -242,11 +249,14 @@ export default async function HomePage() {
             <Link href="/recruit" className="button-primary">
               지원하러 가기
             </Link>
-            <Link href="/recruit/new" className="button-secondary">
-              모집글 작성하기
+            <Link href={createEntry.href} className="button-secondary">
+              {createEntry.label}
             </Link>
           </div>
         </div>
+        <p className="text-sm font-medium text-[color:var(--muted)]">
+          {createEntry.hint}
+        </p>
       </section>
     </div>
   );

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useDeferredValue, useEffect, useState } from "react";
 import { PostCard } from "@/components/post-card";
+import type { RecruitCreateEntry } from "@/lib/recruit-create-entry";
 import {
   categoryFilters,
   filterPosts,
@@ -14,9 +15,10 @@ import type { RecruitCategory, RecruitPost } from "@/types/recruit";
 
 type RecruitBoardProps = {
   initialPosts: RecruitPost[];
+  createEntry: RecruitCreateEntry;
 };
 
-export function RecruitBoard({ initialPosts }: RecruitBoardProps) {
+export function RecruitBoard({ initialPosts, createEntry }: RecruitBoardProps) {
   const [localPosts, setLocalPosts] = useState<RecruitPost[]>([]);
   const [category, setCategory] = useState<"all" | RecruitCategory>("all");
   const [campus, setCampus] = useState("all");
@@ -56,14 +58,17 @@ export function RecruitBoard({ initialPosts }: RecruitBoardProps) {
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Link href="/recruit/new" className="button-primary">
-              새 모집글 작성
+            <Link href={createEntry.href} className="button-primary">
+              {createEntry.label}
             </Link>
             <div className="rounded-[1.5rem] border border-white/60 bg-white/78 px-4 py-3 text-sm font-semibold text-[color:var(--muted)]">
               내 브라우저 저장 글 {localPosts.length}개
             </div>
           </div>
         </div>
+        <p className="mt-4 text-sm font-medium text-[color:var(--muted)]">
+          {createEntry.hint}
+        </p>
 
         <div className="mt-8 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="grid gap-4 rounded-[1.8rem] border border-white/65 bg-white/72 p-4">
@@ -167,8 +172,8 @@ export function RecruitBoard({ initialPosts }: RecruitBoardProps) {
             <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-[color:var(--muted)]">
               검색어를 바꾸거나 새 모집글을 작성해 새로운 팀을 만들어보세요.
             </p>
-            <Link href="/recruit/new" className="button-primary mt-6">
-              모집글 직접 작성하기
+            <Link href={createEntry.href} className="button-primary mt-6">
+              {createEntry.emptyStateLabel}
             </Link>
           </div>
         )}
