@@ -141,11 +141,23 @@ a {
   font-weight: 700;
   color: white;
   box-shadow: 0 20px 40px rgba(229, 87, 36, 0.24);
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    background 180ms ease,
+    filter 180ms ease;
 }
 
 .button-primary:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px) scale(1.01);
   background: linear-gradient(135deg, var(--accent-strong) 0%, #ff7f52 100%);
+  box-shadow: 0 24px 48px rgba(229, 87, 36, 0.3);
+  filter: saturate(1.05);
+  cursor: pointer;
+}
+
+.button-primary:active {
+  transform: translateY(0);
 }
 
 .button-secondary {
@@ -161,12 +173,33 @@ a {
   padding: 0.95rem 1.4rem;
   font-weight: 700;
   color: var(--foreground);
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease,
+    color 180ms ease;
 }
 
 .button-secondary:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px);
   border-color: rgba(16, 35, 58, 0.22);
   background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 16px 32px rgba(16, 35, 58, 0.12);
+  color: var(--accent-strong);
+  cursor: pointer;
+}
+
+.button-secondary:active {
+  transform: translateY(0);
+}
+
+.button-primary:focus-visible,
+.button-secondary:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 4px rgba(255, 111, 60, 0.16),
+    0 18px 40px rgba(16, 35, 58, 0.14);
 }
 
 .button-ghost {
