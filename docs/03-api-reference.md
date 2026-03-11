@@ -8,7 +8,9 @@
 - Content-Type: `application/json`
 - 시간 포맷: `ISO-8601`
 - 키 네이밍: `camelCase`
-- 인증 방식: 없음
+- 인증 방식:
+  - MVP recruit 조회/지원 계약은 기존 무인증 문서를 유지한다.
+  - Phase 1 B 브랜치에서는 `feature/p1-identity-contracts` 머지 전까지 branch-local auth entry cookie를 임시로 사용한다.
 
 공통 실패 응답 예시:
 
@@ -30,6 +32,7 @@
 | `201` | mock 생성 성공 |
 | `202` | mock 지원 접수 성공 |
 | `400` | 입력 오류 |
+| `401` | 세션 진입 필요 |
 | `404` | 모집글 없음 |
 | `409` | 중복 지원 등 충돌 |
 
@@ -37,12 +40,43 @@
 
 | Method | Endpoint | Auth | 설명 |
 | --- | --- | --- | --- |
+| `GET` | `/auth-entry/session` | Temp | 임시 auth entry 세션 존재 여부 확인 |
+| `POST` | `/auth-entry/session` | No | 로그인/회원가입 진입 세션 생성 |
+| `DELETE` | `/auth-entry/session` | Temp | 임시 auth entry 세션 종료 |
 | `GET` | `/posts` | No | 모집글 목록 조회 |
 | `GET` | `/posts/{slug}` | No | 모집글 상세 조회 |
-| `POST` | `/posts` | No | 모집글 mock 생성 |
+| `POST` | `/posts` | Temp | 모집글 mock 생성 |
 | `POST` | `/posts/{slug}/apply` | No | 지원하기 mock 제출 |
 
 ## 4) 핵심 API 상세
+
+### `POST /api/auth-entry/session`
+
+참고:
+
+- 이 엔드포인트는 `feature/p1-auth-entry` 브랜치의 임시 진입 어댑터다.
+- 최종 `User` / `Session` 계약을 의미하지 않는다.
+
+Request:
+
+```json
+{
+  "mode": "signup",
+  "email": "student@example.com",
+  "displayName": "정글 팀장"
+}
+```
+
+Success:
+
+```json
+{
+  "success": true,
+  "data": {
+    "nextPath": "/recruit/new"
+  }
+}
+```
 
 ### `GET /api/posts`
 
@@ -104,6 +138,10 @@ Success:
 ```
 
 ### `POST /api/posts`
+
+Auth:
+
+- Phase 1 B 브랜치에서는 임시 auth entry session 필요
 
 Request:
 
@@ -169,6 +207,18 @@ Success:
 ```
 
 실패 예시:
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "AUTH_ENTRY_REQUIRED",
+    "message": "글쓰기 전에 로그인 또는 회원가입으로 세션을 시작해주세요."
+  }
+}
+```
+
+기존 실패 예시:
 
 ```json
 {
