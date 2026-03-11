@@ -5,6 +5,7 @@ import type {
   RecruitCategory,
   RecruitPost,
 } from "@/types/recruit";
+import { normalizeText } from "@/lib/identity";
 
 export const categoryMeta: Record<
   RecruitCategory,
@@ -49,38 +50,145 @@ export const categoryFilters: Array<{
   { value: "hackathon", label: "해커톤" },
 ];
 
-export function mergePosts(
-  preferredPosts: RecruitPost[],
-  fallbackPosts: RecruitPost[],
-) {
-  const seen = new Set<string>();
-  const merged: RecruitPost[] = [];
+const MIN_RECRUIT_DEADLINE_YEAR = 2024;
+const MAX_RECRUIT_DEADLINE_YEAR = 2100;
+const HANGUL_JAMO_PATTERN = /[ㄱ-ㅎㅏ-ㅣ]{3,}/u;
+const REPEATED_SEGMENT_PATTERN = /^(.{1,6})\1+$/u;
 
-  [...preferredPosts, ...fallbackPosts].forEach((post) => {
-    if (seen.has(post.slug) || isBrokenRecruitPost(post)) {
-      return;
-    }
+function normalizeRecruitToken(value: string) {
+  return normalizeText(value).toLowerCase().replace(/\s+/g, " ");
+}
 
-    seen.add(post.slug);
-    merged.push(post);
-  });
+function normalizeRecruitTextList(values: string[]) {
+  return values.map(normalizeText).filter(Boolean);
+}
 
-  return merged.sort((left, right) =>
-    right.createdAt.localeCompare(left.createdAt),
+function hasRepeatedSegmentText(value: string) {
+  const compact = normalizeRecruitToken(value).replace(/\s+/g, "");
+
+  return (
+    compact.length >= 4 &&
+    compact.length <= 24 &&
+    REPEATED_SEGMENT_PATTERN.test(compact)
   );
 }
 
-function containsBrokenText(value: string) {
-  const normalized = value.trim();
+function isBrokenRecruitField(value: string) {
+  const normalized = normalizeText(value);
 
   if (!normalized) {
     return false;
   }
 
-  return normalized.includes("�") || /\?[\s?]*\?/.test(normalized);
+  return (
+    normalized.includes("�") ||
+    /\?[\s?]*\?/.test(normalized) ||
+    HANGUL_JAMO_PATTERN.test(normalized) ||
+    hasRepeatedSegmentText(normalized)
+  );
+}
+
+function hasRepeatedPlaceholderFields(post: RecruitPost) {
+  const shortFields = [
+    post.title,
+    post.campus,
+    post.stage,
+    post.ownerName,
+    post.ownerRole,
+    post.meetingStyle,
+  ]
+    .map(normalizeRecruitToken)
+    .filter((value) => value.length > 0 && value.length <= 8);
+
+  const counts = new Map<string, number>();
+
+  shortFields.forEach((value) => {
+    counts.set(value, (counts.get(value) ?? 0) + 1);
+  });
+
+  return [...counts.values()].some((count) => count >= 3);
+}
+
+function buildRecruitPostFingerprint(post: RecruitPost) {
+  return [
+    post.category,
+    normalizeRecruitToken(post.title),
+    normalizeRecruitToken(post.campus),
+    normalizeRecruitToken(post.summary),
+    normalizeRecruitToken(post.description.split("\n")[0] ?? post.description),
+    normalizeRecruitToken(post.ownerName),
+    normalizeRecruitTextList(post.roles)
+      .sort((left, right) => left.localeCompare(right))
+      .join(","),
+  ].join("|");
+}
+
+function sortRecruitPosts(posts: RecruitPost[]) {
+  return [...posts].sort((left, right) =>
+    right.createdAt.localeCompare(left.createdAt),
+  );
+}
+
+export function hasInvalidRecruitDeadline(value: string) {
+  const normalized = normalizeText(value);
+
+  if (!normalized) {
+    return true;
+  }
+
+  const date = new Date(normalized);
+
+  if (Number.isNaN(date.getTime())) {
+    return true;
+  }
+
+  const year = date.getUTCFullYear();
+  return year < MIN_RECRUIT_DEADLINE_YEAR || year > MAX_RECRUIT_DEADLINE_YEAR;
+}
+
+export function curateRecruitPosts(posts: RecruitPost[]) {
+  const seenSlugs = new Set<string>();
+  const seenFingerprints = new Set<string>();
+  const curated: RecruitPost[] = [];
+
+  sortRecruitPosts(posts).forEach((post) => {
+    if (seenSlugs.has(post.slug) || isBrokenRecruitPost(post)) {
+      return;
+    }
+
+    const fingerprint = buildRecruitPostFingerprint(post);
+
+    if (seenFingerprints.has(fingerprint)) {
+      return;
+    }
+
+    seenSlugs.add(post.slug);
+    seenFingerprints.add(fingerprint);
+    curated.push(post);
+  });
+
+  return curated;
+}
+
+export function findCuratedRecruitPost(posts: RecruitPost[], slug: string) {
+  return curateRecruitPosts(posts).find((post) => post.slug === slug);
+}
+
+export function mergePosts(
+  preferredPosts: RecruitPost[],
+  fallbackPosts: RecruitPost[],
+) {
+  return curateRecruitPosts([...preferredPosts, ...fallbackPosts]);
 }
 
 export function isBrokenRecruitPost(post: RecruitPost) {
+  if (
+    hasInvalidRecruitDeadline(post.deadline) ||
+    hasRepeatedPlaceholderFields(post)
+  ) {
+    return true;
+  }
+
   return [
     post.title,
     post.campus,
@@ -96,7 +204,7 @@ export function isBrokenRecruitPost(post: RecruitPost) {
     ...post.techStack,
     ...post.expectations,
     ...post.perks,
-  ].some(containsBrokenText);
+  ].some(isBrokenRecruitField);
 }
 
 export function filterPosts(
@@ -135,6 +243,10 @@ export function getCampusOptions(posts: RecruitPost[]) {
 }
 
 export function formatDateLabel(value: string) {
+  if (hasInvalidRecruitDeadline(value)) {
+    return "-";
+  }
+
   return new Intl.DateTimeFormat("ko-KR", {
     month: "short",
     day: "numeric",
@@ -142,12 +254,18 @@ export function formatDateLabel(value: string) {
 }
 
 export function formatDateTimeLabel(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+
   return new Intl.DateTimeFormat("ko-KR", {
     month: "numeric",
     day: "numeric",
     hour: "numeric",
     minute: "numeric",
-  }).format(new Date(value));
+  }).format(date);
 }
 
 export function buildSlugFromTitle(title: string) {
@@ -196,6 +314,45 @@ export function createRuntimeRecruitPost(
     ],
     perks: ["배포 가능한 결과물", "실전 협업 경험", "서비스 운영 경험"],
   };
+}
+
+export function validateRecruitPostInput(input: CreateRecruitPostInput) {
+  const requiredFields = [
+    input.title,
+    input.campus,
+    input.summary,
+    input.description,
+    input.stage,
+    input.deadline,
+    input.ownerName,
+    input.ownerRole,
+    input.meetingStyle,
+    input.schedule,
+    input.goal,
+  ].map(normalizeText);
+
+  if (requiredFields.some((value) => value.length === 0) || input.roles.length === 0) {
+    return "필수 입력값을 확인해주세요.";
+  }
+
+  if (!Number.isInteger(input.capacity) || input.capacity < 1 || input.capacity > 20) {
+    return "모집 인원은 1명 이상 20명 이하로 입력해주세요.";
+  }
+
+  if (hasInvalidRecruitDeadline(input.deadline)) {
+    return "마감일을 올바르게 입력해주세요.";
+  }
+
+  const validationPost = createRuntimeRecruitPost({
+    ...input,
+    slug: "validation-preview",
+  });
+
+  if (isBrokenRecruitPost(validationPost)) {
+    return "테스트용 또는 품질이 낮은 입력은 등록할 수 없습니다.";
+  }
+
+  return null;
 }
 
 export function createRuntimeApplication(
