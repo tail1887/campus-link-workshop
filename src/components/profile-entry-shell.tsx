@@ -58,7 +58,7 @@ export function ProfileEntryShell({ model }: ProfileEntryShellProps) {
 
       <section className="panel rounded-[1.8rem] p-5">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-          Integration Notes
+          Entry Guide
         </p>
         <div className="mt-4 grid gap-3">
           {model.notes.map((item) => (

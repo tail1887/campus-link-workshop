@@ -4,6 +4,12 @@ import { getCurrentAuthContext } from "@/lib/server/auth-context";
 
 export async function SiteHeader() {
   const authContext = await getCurrentAuthContext();
+  const currentUser = authContext.authenticated ? authContext.user : null;
+  const profileHref = currentUser
+    ? currentUser.role === "admin"
+      ? "/admin/profile"
+      : "/profile"
+    : null;
 
   return (
     <header className="sticky top-0 z-50">
@@ -30,12 +36,14 @@ export async function SiteHeader() {
             >
               모집글 목록
             </Link>
-            <Link
-              href="/entry"
-              className="text-sm font-semibold text-[color:var(--muted)] hover:text-slate-950"
-            >
-              프로필 진입
-            </Link>
+            {profileHref ? (
+              <Link
+                href={profileHref}
+                className="text-sm font-semibold text-[color:var(--muted)] hover:text-slate-950"
+              >
+                {currentUser?.role === "admin" ? "운영자 화면" : "내 프로필"}
+              </Link>
+            ) : null}
             {authContext.authenticated && authContext.user.role === "student" ? (
               <>
                 <Link

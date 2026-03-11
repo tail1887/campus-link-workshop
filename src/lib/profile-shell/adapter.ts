@@ -379,74 +379,85 @@ export function buildProfileEntryViewModel(
   verification?: Verification | null,
 ): ProfileEntryViewModel {
   const recommendedRole = authContext.authenticated ? authContext.user.role : null;
+  const userProfileHref = authContext.authenticated ? "/profile" : "/login?next=%2Fprofile";
+  const verificationHref = authContext.authenticated
+    ? "/verification"
+    : "/login?next=%2Fverification";
+  const adminProfileHref = authContext.authenticated
+    ? "/admin/profile"
+    : "/login?next=%2Fadmin%2Fprofile";
 
   return {
     status: authContext.authenticated ? "ready" : "guest",
-    title: "역할별 프로필 진입 구조",
+    title: "프로필 기능 둘러보기",
     subtitle: authContext.authenticated
-      ? "현재 세션의 role을 기준으로 기본 셸 진입점을 우선 안내하고, 다른 역할 셸은 preview 경로로 남겨둡니다."
-      : "A 트랙 계약이 아직 완전히 고정되지 않은 상황을 감안해, 게스트 상태에서도 사용자/관리자 셸 구조를 함께 미리 볼 수 있습니다.",
-    recommendedHref: recommendedRole ? getRoleRoute(recommendedRole) : "/profile",
+      ? "현재 로그인 상태에 맞는 기본 프로필 화면과 주요 기능으로 바로 이동할 수 있습니다."
+      : "로그인하면 내 모집글, 지원 현황, 인증, 이력서 같은 프로필 기능으로 자연스럽게 이어집니다.",
+    recommendedHref: recommendedRole ? getRoleRoute(recommendedRole) : userProfileHref,
     recommendedLabel: recommendedRole
-      ? `${recommendedRole === "admin" ? "관리자" : "사용자"} 기본 셸 열기`
-      : "사용자 셸 미리보기 열기",
+      ? `${recommendedRole === "admin" ? "운영자" : "내"} 프로필 열기`
+      : "로그인하고 프로필 시작하기",
     eyebrow:
       recommendedRole === "student" && verification
         ? getVerificationBadgeLabel(verification.badge)
-        : "Phase 2 B Track",
+        : "Profile Entry",
     summaryCards: [
       {
-        label: "Session",
-        value: authContext.authenticated ? "로그인됨" : "게스트",
+        label: "세션 상태",
+        value: authContext.authenticated ? "로그인됨" : "로그인 필요",
       },
       {
-        label: "Current Identity",
-        value: authContext.authenticated ? authContext.user.email : "없음",
+        label: "현재 계정",
+        value: authContext.authenticated ? authContext.user.email : "게스트",
       },
       {
-        label: recommendedRole === "student" ? "Verification" : "Recommended Role",
+        label: recommendedRole === "student" ? "인증 상태" : "추천 경로",
         value:
           recommendedRole === "student" && verification
             ? getVerificationStatusLabel(verification.status)
             : recommendedRole
-              ? getRoleLabel(recommendedRole)
-              : "student preview",
+              ? recommendedRole === "admin"
+                ? "운영자 프로필"
+                : "내 프로필"
+              : "프로필 시작",
       },
     ],
     cards: [
       {
-        href: "/profile",
-        eyebrow: "User Entry",
-        title: "사용자 기본 프로필 셸",
+        href: userProfileHref,
+        eyebrow: "Profile",
+        title: "내 프로필과 활동",
         description:
-          "자기소개, 관심 키워드, 추가 인증, 이력서 모듈이 연결될 사용자용 기본 셸입니다.",
-        state: recommendedRole === "student" ? "recommended" : "preview",
+          "자기소개, 내 모집글, 지원 현황, 인증/이력서 기능으로 이어지는 기본 프로필 화면입니다.",
+        state: recommendedRole === "student" ? "추천" : "로그인 후 사용",
       },
       {
-        href: "/verification",
-        eyebrow: "Verification",
-        title: "추가 인증 상태와 배지",
+        href: verificationHref,
+        eyebrow: "Trust",
+        title: "인증과 신뢰도 관리",
         description:
-          "인증 요청 제출, 현재 상태 확인, 프로필 배지 표시 상태를 확인하는 Phase 2 B 진입점입니다.",
+          "인증 상태를 확인하고 신뢰 배지와 제출 흐름을 관리하는 화면입니다.",
         state:
           recommendedRole === "student" && verification
             ? getVerificationStatusLabel(verification.status)
-            : "preview",
+            : authContext.authenticated
+              ? "바로 이동"
+              : "로그인 후 사용",
       },
       {
-        href: "/admin/profile",
-        eyebrow: "Admin Entry",
-        title: "관리자 기본 프로필 셸",
+        href: adminProfileHref,
+        eyebrow: "Admin",
+        title: "운영자 화면",
         description:
-          "관리자 역할 요약, 운영 진입점, 후속 검수 도구가 연결될 관리자용 기본 셸입니다.",
-        state: recommendedRole === "admin" ? "recommended" : "preview",
+          "운영 계정에서 모집 관리와 운영 도구로 이어지는 관리자 전용 진입 화면입니다.",
+        state: recommendedRole === "admin" ? "추천" : "운영자 전용",
       },
     ],
     notes: [
-      "role-based entry 판정은 현재 세션의 shared AuthContext를 그대로 사용합니다.",
-      "세부 profile shape는 이 브랜치에서 고정하지 않고 셸 내부 슬롯만 확보합니다.",
-      "Verification 진입은 같은 shared contract를 사용하므로 profile과 admin 후속 브랜치가 별도 badge enum을 만들 필요가 없습니다.",
-      "후속 브랜치는 이 entry에서 추천 경로와 각 셸의 placeholder 영역을 교체하면 됩니다.",
+      "학생 계정은 내 프로필, 내 모집글, 지원 현황으로 바로 이어집니다.",
+      "인증과 이력서 기능은 로그인 후 같은 프로필 흐름 안에서 계속 사용할 수 있습니다.",
+      "운영자 화면은 관리자 권한이 있는 계정에서만 실제 관리 기능으로 연결됩니다.",
+      "로그인하지 않은 상태에서는 기능 소개 중심으로 보여주고, 필요한 경로는 로그인 뒤 바로 이어집니다.",
     ],
   };
 }
