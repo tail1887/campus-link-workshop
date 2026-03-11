@@ -110,6 +110,7 @@
 - Smoke Test: 메인 > 목록 > 상세 > 지원하기 > 글쓰기 흐름이 브라우저에서 이어지는지 확인
 - Lint Test: `npm run lint`
 - Build Test: `npm run build`
+- 브랜치별 자동/수동 테스트 분리 원칙은 `docs/06-testing-playbook.md`를 따른다.
 
 최소 체크리스트:
 
@@ -127,6 +128,7 @@
 - [ ] mock API나 데이터 구조 변경 시 `docs/03-api-reference.md`를 같이 업데이트했다
 - [ ] UI 흐름 변경 시 `README.md` 데모 시나리오를 점검했다
 - [ ] `npm run lint`와 `npm run build` 결과를 확인했다
+- [ ] 자동 테스트와 수동 테스트 범위를 구분해서 기록했다
 
 ## 9) 마일스톤 예시
 

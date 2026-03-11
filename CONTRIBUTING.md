@@ -45,6 +45,12 @@ git config commit.template .gitmessage.txt
 - Push to `main`: CI 통과 후 Vercel 프로덕션 자동 배포
 - PR opened / synchronized to `main`: `main` 최신 커밋 자동 동기화 시도
 
+## 테스트 원칙
+
+- 브랜치별 테스트 책임과 수동 테스트 범위는 `docs/06-testing-playbook.md`를 따릅니다.
+- PR 본문에는 자동 테스트와 수동 테스트를 구분해서 적습니다.
+- Codex가 직접 가능한 검증과 사람이 확인해야 하는 검증을 분리합니다.
+
 GitHub Secrets:
 
 - `VERCEL_TOKEN`
