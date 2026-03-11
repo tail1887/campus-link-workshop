@@ -1,4 +1,4 @@
-import { mergePosts } from "@/lib/recruit";
+import { isBrokenRecruitPost, mergePosts } from "@/lib/recruit";
 import type { RecruitApplication, RecruitPost } from "@/types/recruit";
 
 const POSTS_KEY = "campus-link.posts.v1";
@@ -34,32 +34,9 @@ function writeArray<T>(key: string, items: T[]) {
   window.localStorage.setItem(key, JSON.stringify(items));
 }
 
-function containsBrokenText(value: string) {
-  return value.includes("??") || value.includes("�");
-}
-
-function isBrokenStoredPost(post: RecruitPost) {
-  return [
-    post.title,
-    post.campus,
-    post.summary,
-    post.description,
-    post.stage,
-    post.ownerName,
-    post.ownerRole,
-    post.meetingStyle,
-    post.schedule,
-    post.goal,
-    ...post.roles,
-    ...post.techStack,
-    ...post.expectations,
-    ...post.perks,
-  ].some(containsBrokenText);
-}
-
 export function getStoredPosts() {
   const storedPosts = readArray<RecruitPost>(POSTS_KEY);
-  const cleanedPosts = storedPosts.filter((post) => !isBrokenStoredPost(post));
+  const cleanedPosts = storedPosts.filter((post) => !isBrokenRecruitPost(post));
 
   if (cleanedPosts.length !== storedPosts.length) {
     writeArray(POSTS_KEY, cleanedPosts);
