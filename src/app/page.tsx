@@ -12,7 +12,19 @@ export default async function HomePage() {
   const authContext = await getCurrentAuthContext();
   const posts: RecruitPost[] = await listRecruitPosts();
   const createEntry = getRecruitCreateEntry(authContext.authenticated);
-  const featuredPosts = posts.filter((post) => post.highlight).slice(0, 3);
+  const sortedPosts = [...posts].sort(
+    (left, right) =>
+      new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
+  );
+  const spotlightPosts = posts.filter((post) => post.highlight).slice(0, 2);
+  const curationLeadPosts =
+    spotlightPosts.length > 0 ? spotlightPosts : sortedPosts.slice(0, 2);
+  const leadPostSlugs = new Set(curationLeadPosts.map((post) => post.slug));
+  const featuredPosts = sortedPosts
+    .filter((post) => !leadPostSlugs.has(post.slug))
+    .slice(0, 3);
+  const secondaryCurationPosts =
+    featuredPosts.length > 0 ? featuredPosts : curationLeadPosts;
   const openRoles = posts.reduce((sum, post) => sum + post.capacity, 0);
   const campusCount = new Set(posts.map((post) => post.campus)).size;
 
@@ -117,7 +129,7 @@ export default async function HomePage() {
                     Spotlight
                   </p>
                   <p className="mt-2 text-lg font-semibold text-slate-950">
-                    지금 바로 지원이 많이 붙는 라인업
+                    지금 먼저 확인할 추천 모집글
                   </p>
                 </div>
                 <Link
@@ -128,7 +140,7 @@ export default async function HomePage() {
                 </Link>
               </div>
               <div className="mt-4 space-y-2.5 sm:space-y-3">
-                {featuredPosts.map((post, index) => (
+                {curationLeadPosts.map((post, index) => (
                   <div
                     key={post.slug}
                     className="rounded-[1.15rem] border border-slate-200/70 bg-white/82 p-3 sm:rounded-[1.35rem] sm:p-4"
@@ -210,11 +222,11 @@ export default async function HomePage() {
       <section className="space-y-4 sm:space-y-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-3">
-            <span className="eyebrow">Featured Boards</span>
+            <span className="eyebrow">Fresh Boards</span>
             <h2 className="section-title text-slate-950">
-              지금 주목받는
+              최근 업데이트된
               <br />
-              대표 모집글 라인업
+              모집글 모아보기
             </h2>
           </div>
           <Link href="/recruit" className="button-secondary">
@@ -222,7 +234,7 @@ export default async function HomePage() {
           </Link>
         </div>
         <div className="grid gap-5 lg:grid-cols-3">
-          {featuredPosts.map((post, index) => (
+          {secondaryCurationPosts.map((post, index) => (
             <PostCard
               key={post.slug}
               post={post}

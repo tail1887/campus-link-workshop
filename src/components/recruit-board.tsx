@@ -39,6 +39,15 @@ export function RecruitBoard({ initialPosts, createEntry }: RecruitBoardProps) {
   const filtered = filterPosts(merged, { category, campus, query: deferredQuery });
   const campusOptions = getCampusOptions(merged);
   const highlighted = filtered.filter((post) => post.highlight).slice(0, 3);
+  const highlightedSlugs = new Set(highlighted.map((post) => post.slug));
+  const remainingPosts = filtered.filter((post) => !highlightedSlugs.has(post.slug));
+  const hasActiveFilters = category !== "all" || campus !== "all" || query.trim().length > 0;
+
+  const resetFilters = () => {
+    setCategory("all");
+    setCampus("all");
+    setQuery("");
+  };
 
   return (
     <div className="shell space-y-6 pb-8 pt-6 sm:space-y-8">
@@ -154,15 +163,34 @@ export function RecruitBoard({ initialPosts, createEntry }: RecruitBoardProps) {
           <div>
             <span className="eyebrow">All Posts</span>
             <h2 className="mt-3 display text-3xl text-slate-950">
-              조건에 맞는 모집글
+              {highlighted.length > 0 ? "추천 외에 더 볼 모집글" : "조건에 맞는 모집글"}
             </h2>
           </div>
         </div>
-        {filtered.length > 0 ? (
+        {remainingPosts.length > 0 ? (
           <div className="grid gap-3 sm:gap-5 lg:grid-cols-3">
-            {filtered.map((post) => (
+            {remainingPosts.map((post) => (
               <PostCard key={post.slug} post={post} />
             ))}
+          </div>
+        ) : filtered.length > 0 && highlighted.length > 0 ? (
+          <div className="panel-strong rounded-[1.6rem] px-5 py-8 text-center sm:rounded-[1.8rem] sm:px-6 sm:py-10">
+            <p className="display text-2xl text-slate-950">
+              현재 조건에서는 추천 모집글이 먼저 보입니다.
+            </p>
+            <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-[color:var(--muted)]">
+              중복 카드는 숨겨두었습니다. 검색어나 필터를 조금 넓히면 다른
+              모집글도 바로 이어서 볼 수 있습니다.
+            </p>
+            {hasActiveFilters ? (
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="button-secondary mt-6"
+              >
+                필터 초기화
+              </button>
+            ) : null}
           </div>
         ) : (
           <div className="panel-strong rounded-[1.6rem] px-5 py-8 text-center sm:rounded-[1.8rem] sm:px-6 sm:py-10">
