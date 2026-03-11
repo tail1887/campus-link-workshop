@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useDeferredValue, useEffect, useState } from "react";
 import { PostCard } from "@/components/post-card";
+import type { RecruitCreateEntry } from "@/lib/recruit-create-entry";
 import {
   categoryFilters,
   filterPosts,
@@ -14,9 +15,10 @@ import type { RecruitCategory, RecruitPost } from "@/types/recruit";
 
 type RecruitBoardProps = {
   initialPosts: RecruitPost[];
+  createEntry: RecruitCreateEntry;
 };
 
-export function RecruitBoard({ initialPosts }: RecruitBoardProps) {
+export function RecruitBoard({ initialPosts, createEntry }: RecruitBoardProps) {
   const [localPosts, setLocalPosts] = useState<RecruitPost[]>([]);
   const [category, setCategory] = useState<"all" | RecruitCategory>("all");
   const [campus, setCampus] = useState("all");
@@ -39,8 +41,8 @@ export function RecruitBoard({ initialPosts }: RecruitBoardProps) {
   const highlighted = filtered.filter((post) => post.highlight).slice(0, 3);
 
   return (
-    <div className="shell space-y-8 pb-8 pt-6">
-      <section className="panel-strong rounded-[2rem] px-6 py-8 sm:px-8">
+    <div className="shell space-y-6 pb-8 pt-6 sm:space-y-8">
+      <section className="panel-strong rounded-[1.8rem] px-5 py-6 sm:rounded-[2rem] sm:px-8 sm:py-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-4">
             <span className="eyebrow">Recruit Board</span>
@@ -56,17 +58,20 @@ export function RecruitBoard({ initialPosts }: RecruitBoardProps) {
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Link href="/recruit/new" className="button-primary">
-              새 모집글 작성
+            <Link href={createEntry.href} className="button-primary">
+              {createEntry.label}
             </Link>
-            <div className="rounded-[1.5rem] border border-white/60 bg-white/78 px-4 py-3 text-sm font-semibold text-[color:var(--muted)]">
+            <div className="rounded-[1.25rem] border border-white/60 bg-white/78 px-4 py-3 text-sm font-semibold text-[color:var(--muted)] sm:rounded-[1.5rem]">
               내 브라우저 저장 글 {localPosts.length}개
             </div>
           </div>
         </div>
+        <p className="mt-4 text-sm font-medium text-[color:var(--muted)]">
+          {createEntry.hint}
+        </p>
 
-        <div className="mt-8 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="grid gap-4 rounded-[1.8rem] border border-white/65 bg-white/72 p-4">
+        <div className="mt-6 grid gap-3 sm:mt-8 sm:gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="grid gap-3 rounded-[1.5rem] border border-white/65 bg-white/72 p-3 sm:gap-4 sm:rounded-[1.8rem] sm:p-4">
             <div className="grid gap-3 md:grid-cols-[1fr_auto]">
               <input
                 value={query}
@@ -92,7 +97,7 @@ export function RecruitBoard({ initialPosts }: RecruitBoardProps) {
                   type="button"
                   key={item.value}
                   onClick={() => setCategory(item.value)}
-                  className={`rounded-full px-4 py-2 text-sm font-semibold ${
+                  className={`rounded-full px-3 py-2 text-sm font-semibold sm:px-4 ${
                     category === item.value
                       ? "bg-slate-950 text-white"
                       : "border border-slate-200/80 bg-white/84 text-slate-700"
@@ -104,7 +109,7 @@ export function RecruitBoard({ initialPosts }: RecruitBoardProps) {
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 lg:grid-cols-1">
             {[
               { label: "전체 모집글", value: merged.length },
               { label: "현재 필터 결과", value: filtered.length },
@@ -112,12 +117,12 @@ export function RecruitBoard({ initialPosts }: RecruitBoardProps) {
             ].map((item) => (
               <div
                 key={item.label}
-                className="rounded-[1.5rem] border border-white/65 bg-white/78 p-4"
+                className="rounded-[1.2rem] border border-white/65 bg-white/78 p-3 sm:rounded-[1.5rem] sm:p-4"
               >
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
                   {item.label}
                 </p>
-                <p className="display mt-3 text-3xl text-slate-950">
+                <p className="display mt-2 text-2xl text-slate-950 sm:mt-3 sm:text-3xl">
                   {item.value.toString().padStart(2, "0")}
                 </p>
               </div>
@@ -136,7 +141,7 @@ export function RecruitBoard({ initialPosts }: RecruitBoardProps) {
               </h2>
             </div>
           </div>
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid gap-3 sm:gap-4 lg:grid-cols-3">
             {highlighted.map((post) => (
               <PostCard key={post.slug} post={post} compact />
             ))}
@@ -154,21 +159,21 @@ export function RecruitBoard({ initialPosts }: RecruitBoardProps) {
           </div>
         </div>
         {filtered.length > 0 ? (
-          <div className="grid gap-5 lg:grid-cols-3">
+          <div className="grid gap-3 sm:gap-5 lg:grid-cols-3">
             {filtered.map((post) => (
               <PostCard key={post.slug} post={post} />
             ))}
           </div>
         ) : (
-          <div className="panel-strong rounded-[1.8rem] px-6 py-10 text-center">
+          <div className="panel-strong rounded-[1.6rem] px-5 py-8 text-center sm:rounded-[1.8rem] sm:px-6 sm:py-10">
             <p className="display text-2xl text-slate-950">
               조건에 맞는 모집글이 아직 없습니다.
             </p>
             <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-[color:var(--muted)]">
               검색어를 바꾸거나 새 모집글을 작성해 새로운 팀을 만들어보세요.
             </p>
-            <Link href="/recruit/new" className="button-primary mt-6">
-              모집글 직접 작성하기
+            <Link href={createEntry.href} className="button-primary mt-6">
+              {createEntry.emptyStateLabel}
             </Link>
           </div>
         )}

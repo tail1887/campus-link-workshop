@@ -7,6 +7,7 @@ import {
   getDefaultAuthEntryNextPath,
   type AuthEntryMode,
 } from "@/lib/auth-entry/integration-points";
+import { isRecruitCreateNextPath } from "@/lib/recruit-create-entry";
 import type {
   ApiError,
   ApiSuccess,
@@ -51,8 +52,32 @@ export function AuthForm({ mode, nextPath, dataSource }: AuthFormProps) {
   const [campus, setCampus] = useState("");
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
-  const copy = copyByMode[mode];
   const resolvedNextPath = nextPath || getDefaultAuthEntryNextPath(mode);
+  const copy = copyByMode[mode];
+  const isRecruitCreateIntent =
+    mode === "login" && isRecruitCreateNextPath(resolvedNextPath);
+  const title = isRecruitCreateIntent
+    ? "로그인 후 바로 모집글을 작성할 수 있습니다"
+    : copy.title;
+  const description = isRecruitCreateIntent
+    ? "로그인하면 작성 폼으로 바로 이동하고, 등록이 끝나면 상세 화면에서 결과를 바로 확인할 수 있습니다."
+    : copy.description;
+  const submitLabel = isRecruitCreateIntent
+    ? "로그인하고 모집글 작성"
+    : copy.submit;
+  const featureItems = isRecruitCreateIntent
+    ? [
+        "로그인 직후 모집글 작성 폼으로 바로 이동합니다.",
+        "작성이 끝나면 상세 페이지에서 결과와 지원 현황을 확인할 수 있습니다.",
+        dataSource === "mock"
+          ? "체험용 계정으로도 작성 흐름을 바로 확인할 수 있습니다."
+          : "계정이 없다면 회원가입 후 같은 흐름으로 이어집니다.",
+      ]
+    : [
+        "로그인 상태가 유지되어 보호된 페이지로 바로 이동합니다.",
+        "회원가입 직후 기본 설정 단계를 이어서 진행할 수 있습니다.",
+        "계정 생성 후 프로필과 모집 기능을 순서대로 이용할 수 있습니다.",
+      ];
   const loginEmailPlaceholder =
     mode === "login" && dataSource === "mock"
       ? "student@campus-link.demo"
@@ -62,7 +87,9 @@ export function AuthForm({ mode, nextPath, dataSource }: AuthFormProps) {
   const helperMessage =
     mode === "login"
       ? dataSource === "mock"
-        ? "체험용 계정으로 주요 기능을 바로 둘러볼 수 있습니다."
+        ? isRecruitCreateIntent
+          ? "체험용 계정으로 로그인해도 바로 모집글 작성 화면으로 이어집니다."
+          : "체험용 계정으로 주요 기능을 바로 둘러볼 수 있습니다."
         : "먼저 회원가입으로 계정을 만든 뒤 로그인하세요."
       : dataSource === "mock"
         ? "지금 회원가입하거나 체험용 계정으로 먼저 서비스를 살펴볼 수 있습니다."
@@ -113,20 +140,16 @@ export function AuthForm({ mode, nextPath, dataSource }: AuthFormProps) {
     <div className="grid gap-5 lg:grid-cols-[0.92fr_1.08fr]">
       <section className="panel-strong rounded-[1.8rem] p-6">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-          {copy.eyebrow}
+          {isRecruitCreateIntent ? "Create Entry" : copy.eyebrow}
         </p>
         <h1 className="mt-3 text-3xl font-semibold text-slate-950">
-          {copy.title}
+          {title}
         </h1>
         <p className="mt-3 text-sm leading-7 text-[color:var(--muted)]">
-          {copy.description}
+          {description}
         </p>
         <div className="mt-6 space-y-3">
-          {[
-            "로그인 상태가 유지되어 보호된 페이지로 바로 이동합니다.",
-            "회원가입 직후 기본 설정 단계를 이어서 진행할 수 있습니다.",
-            "계정 생성 후 프로필과 모집 기능을 순서대로 이용할 수 있습니다.",
-          ].map((item) => (
+          {featureItems.map((item) => (
             <div
               key={item}
               className="rounded-[1.25rem] border border-white/70 bg-white/80 px-4 py-3 text-sm font-medium text-[color:var(--muted)]"
@@ -219,7 +242,7 @@ export function AuthForm({ mode, nextPath, dataSource }: AuthFormProps) {
           disabled={isPending}
           className="button-primary mt-6 w-full disabled:cursor-not-allowed disabled:opacity-70"
         >
-          {isPending ? "로그인 정보 확인 중..." : copy.submit}
+          {isPending ? "로그인 정보 확인 중..." : submitLabel}
         </button>
 
         <div className="mt-4 flex items-center justify-between gap-3 text-sm">

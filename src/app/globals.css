@@ -326,3 +326,18 @@ a {
 .animate-float {
   animation: float 4.2s ease-in-out infinite;
 }
+
+.mobile-clamp-2 {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+@media (min-width: 640px) {
+  .mobile-clamp-2 {
+    display: block;
+    overflow: visible;
+    -webkit-line-clamp: unset;
+  }
+}

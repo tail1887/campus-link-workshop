@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { ApplyPanel } from "@/components/apply-panel";
 import { buildAvatarDataUrl } from "@/lib/avatar";
 import { getRecruitAuthorProfileHref } from "@/lib/public-profile";
+import { getRecruitCreateEntry } from "@/lib/recruit-create-entry";
 import {
   categoryMeta,
   closeRecruitPost,
@@ -43,6 +44,7 @@ export function RecruitDetailView({
   const [hydrated, setHydrated] = useState(false);
   const [localApplyCount, setLocalApplyCount] = useState(0);
   const isOwner = Boolean(currentUser && post?.ownerId === currentUser.id);
+  const createEntry = getRecruitCreateEntry(currentUser !== null);
 
   useEffect(() => {
     const sync = () => {
@@ -93,10 +95,13 @@ export function RecruitDetailView({
             <Link href="/recruit" className="button-primary">
               모집글 목록으로
             </Link>
-            <Link href="/recruit/new" className="button-secondary">
-              새 글 작성하기
+            <Link href={createEntry.href} className="button-secondary">
+              {createEntry.label}
             </Link>
           </div>
+          <p className="mt-4 text-sm font-medium text-[color:var(--muted)]">
+            {createEntry.hint}
+          </p>
         </div>
       </div>
     );
