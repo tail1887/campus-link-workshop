@@ -144,6 +144,24 @@ type CreatePostFormProps = {
   currentUser: CurrentUser;
 };
 
+type SuggestionApiResponse =
+  | ApiSuccess<AiSuggestionJobPayload>
+  | ApiError<string>;
+
+async function parseJsonResponse<T>(response: Response) {
+  const raw = await response.text();
+
+  if (!raw) {
+    throw new Error("서버가 비어 있는 응답을 반환했습니다.");
+  }
+
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    throw new Error("서버 응답을 해석하지 못했습니다.");
+  }
+}
+
 export function CreatePostForm({ currentUser }: CreatePostFormProps) {
   const router = useRouter();
   const [draft, setDraft] = useState<DraftState>(() => ({
@@ -176,9 +194,7 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
       const response = await fetch(`/api/ai/suggestions/jobs/${jobId}`, {
         cache: "no-store",
       });
-      const result = (await response.json()) as
-        | ApiSuccess<AiSuggestionJobPayload>
-        | ApiError<string>;
+      const result = await parseJsonResponse<SuggestionApiResponse>(response);
 
       if (!response.ok || !result.success) {
         throw new Error(
@@ -241,9 +257,7 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
                 }),
               ),
             });
-            const result = (await response.json()) as
-              | ApiSuccess<AiSuggestionJobPayload>
-              | ApiError<string>;
+            const result = await parseJsonResponse<SuggestionApiResponse>(response);
 
             if (!response.ok || !result.success) {
               throw new Error(
@@ -343,7 +357,16 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
         body: JSON.stringify(payload),
       });
 
-      const result = (await response.json()) as {
+      const result = (await parseJsonResponse<{
+        success: boolean;
+        data?: {
+          id: string;
+          slug: string;
+        };
+        error?: {
+          message: string;
+        };
+      }>(response)) as {
         success: boolean;
         data?: {
           id: string;
