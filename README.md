@@ -89,6 +89,7 @@ npm run build
 - [아키텍처 문서](docs/02-architecture.md)
 - [API 문서](docs/03-api-reference.md)
 - [개발 가이드](docs/04-development-guide.md)
+- [Codex 협업 플레이북](docs/05-codex-collaboration-playbook.md)
 
 ## 트러블슈팅 / 배운 점
 
