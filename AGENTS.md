@@ -14,6 +14,11 @@ Source of truth order:
 
 If these documents conflict, follow the numbered order above.
 
+Supplemental operational guide:
+
+- `docs/05-codex-collaboration-playbook.md` is a Codex-team execution guide.
+- It does not override `docs/01` through `docs/04`; it helps teammates apply them consistently.
+
 ## How Codex Should Work In This Repo
 
 Before writing code, Codex should:
