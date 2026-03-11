@@ -35,6 +35,7 @@ flowchart LR
 - Recruit 데이터 저장 방식: 기본값은 seed 데이터와 localStorage fallback, DB 모드에서는 Prisma를 통해 PostgreSQL 사용
 - Identity 데이터 저장 방식: Phase 1 기준으로 같은 data source 모드를 따르며, mock 모드에서는 메모리 저장소와 demo 계정을 사용하고 DB 모드에서는 Prisma `User`, `Session`, `OnboardingState`를 사용한다
 - 세션 경계: 세션 본문은 서버 저장소에 보관하고, 브라우저에는 `campus-link.session` HTTP-only cookie로 세션 식별자만 전달한다
+- 프로필 셸 방식: Phase 1 D 트랙에서는 A 트랙 계약이 머지되기 전까지 branch-local adapter로 사용자/관리자 프로필 셸과 역할별 진입 구조만 제공한다
 
 ## 3) 레이어 구조
 
@@ -42,6 +43,7 @@ flowchart LR
 - UI Components: 카드, 배지, 헤더, 폼, CTA 등 재사용 컴포넌트
 - Feature Layer: 모집글 목록 필터링, 글쓰기, 지원하기 흐름
 - Identity Contracts: `User`, `Role`, `Session`, `OnboardingState`와 auth context 타입
+- Profile Shell Adapter: A 트랙 계약이 머지되기 전까지 사용자/관리자 프로필 셸에 임시 view model을 공급하는 branch-local adapter
 - Recruit Repository: Prisma/PostgreSQL과 mock 저장소를 전환하는 유틸
 - Identity Repository: mock 계정, 세션, 온보딩 상태를 관리하고 Prisma 저장소와 전환하는 유틸
 - Route Handlers: `/api/posts`, `/api/auth/*`, `/api/onboarding/state` 등 API 응답
@@ -57,6 +59,10 @@ src/
 │  ├─ api/
 │  │  ├─ auth/
 │  │  └─ onboarding/
+│  ├─ admin/
+│  ├─ entry/
+│  ├─ login/
+│  ├─ profile/
 │  ├─ recruit/
 │  └─ page.tsx
 ├─ components/
