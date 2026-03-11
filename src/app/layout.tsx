@@ -2,6 +2,12 @@ import type { Metadata } from "next";
 import { Noto_Sans_KR, Space_Grotesk } from "next/font/google";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import {
+  getSiteUrl,
+  isPreviewDeployment,
+  siteDescription,
+  siteName,
+} from "@/lib/site-config";
 import "./globals.css";
 
 const bodyFont = Noto_Sans_KR({
@@ -16,10 +22,61 @@ const displayFont = Space_Grotesk({
   weight: ["500", "700"],
 });
 
+const siteUrl = getSiteUrl();
+
 export const metadata: Metadata = {
-  title: "Campus Link",
-  description:
-    "캠퍼스 스터디와 프로젝트 팀원을 빠르게 찾고 연결하는 팀 매칭 플랫폼",
+  metadataBase: siteUrl,
+  title: {
+    default: siteName,
+    template: `%s | ${siteName}`,
+  },
+  applicationName: siteName,
+  description: siteDescription,
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: siteName,
+    description: siteDescription,
+    url: "/",
+    siteName,
+    locale: "ko_KR",
+    type: "website",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "Campus Link 공유 미리보기 이미지",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteName,
+    description: siteDescription,
+    images: ["/opengraph-image"],
+  },
+  robots: isPreviewDeployment()
+    ? {
+        index: false,
+        follow: false,
+        nocache: true,
+        googleBot: {
+          index: false,
+          follow: false,
+          noimageindex: true,
+        },
+      }
+    : {
+        index: true,
+        follow: true,
+        googleBot: {
+          index: true,
+          follow: true,
+          noimageindex: false,
+        },
+      },
 };
 
 export default function RootLayout({
