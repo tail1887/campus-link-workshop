@@ -43,7 +43,7 @@ flowchart LR
 - Repository 역할: `RECRUIT_DATA_SOURCE` 값에 따라 PostgreSQL 또는 mock 저장소를 선택
 - Demo 안전장치: `RECRUIT_DATA_SOURCE=database` 이어도 `DATABASE_URL` 누락이나 Prisma 조회 실패가 나면 repository layer가 mock 저장소로 강등되어 프로필/모집 데모 흐름을 유지한다
 - Recruit 데이터 저장 방식: 기본값은 seed 데이터와 localStorage fallback, DB 모드에서는 Prisma를 통해 PostgreSQL 사용
-- Identity 데이터 저장 방식: Phase 1 기준으로 같은 data source 모드를 따르며, mock 모드에서는 메모리 저장소와 demo 계정을 사용하고 DB 모드에서는 Prisma `User`, `Session`, `OnboardingState`를 사용한다
+- Identity 데이터 저장 방식: Phase 1 기준으로 같은 data source 모드를 따르며, mock 모드에서는 demo 계정과 runtime 저장소를 사용하고 개발 환경에서는 로컬 상태 파일로 세션/가입 정보를 유지하며 DB 모드에서는 Prisma `User`, `Session`, `OnboardingState`를 사용한다
 - Profile Communication 데이터 저장 방식: Phase 2 기준으로 같은 data source 모드를 따르며, mock 모드에서는 demo 프로필/이력서/문의/알림 설정 store를 사용하고 DB 모드에서는 Prisma `Profile`, `Resume`, `Verification`, `Inquiry`, `AlertPreference`를 사용한다
 - AI Platform 데이터 저장 방식: Phase 3 기준으로 같은 data source 모드를 따르며, mock 모드에서는 runtime GitHub connection/job store를 사용하고 DB 모드에서는 Prisma `GitHubConnection`, `AiJob`를 사용한다
 - Provider Boundary 역할: GitHub 연결/분석과 suggestion 생성을 repository 뒤에 감춰 downstream 브랜치가 provider별 raw 응답 shape를 직접 다루지 않게 한다

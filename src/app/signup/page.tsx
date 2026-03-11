@@ -4,6 +4,8 @@ import { getDefaultAuthEntryNextPath } from "@/lib/auth-entry/integration-points
 import { getCurrentAuthContext } from "@/lib/server/auth-context";
 import { getIdentityDataSource } from "@/lib/server/identity-repository";
 
+export const dynamic = "force-dynamic";
+
 type SignupPageProps = {
   searchParams: Promise<{ next?: string }>;
 };
