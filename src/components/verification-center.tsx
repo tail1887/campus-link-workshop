@@ -93,37 +93,46 @@ export function VerificationCenter({
     }
 
     startTransition(async () => {
-      const response = await fetch("/api/verification", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          method: draft.method,
-          evidenceLabel: draft.evidenceLabel?.trim() || null,
-          evidenceUrl: draft.evidenceUrl?.trim() || null,
-          note: draft.note?.trim() || null,
-        }),
-      });
+      try {
+        const response = await fetch("/api/verification", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            method: draft.method,
+            evidenceLabel: draft.evidenceLabel?.trim() || null,
+            evidenceUrl: draft.evidenceUrl?.trim() || null,
+            note: draft.note?.trim() || null,
+          }),
+        });
 
-      const payload = (await response.json().catch(() => null)) as
-        | { success: true; data: VerificationPayload }
-        | { success: false; error?: { message?: string } }
-        | null;
+        const payload = (await response.json().catch(() => null)) as
+          | { success: true; data: VerificationPayload }
+          | { success: false; error?: { message?: string } }
+          | null;
 
-      if (!response.ok || !payload) {
+        if (!payload) {
+          setError("인증 요청 제출에 실패했습니다.");
+          return;
+        }
+
+        if (!payload.success) {
+          setError(payload.error?.message ?? "인증 요청 제출에 실패했습니다.");
+          return;
+        }
+
+        if (!response.ok) {
+          setError("인증 요청 제출에 실패했습니다.");
+          return;
+        }
+
+        setVerification(payload.data.verification);
+        setDraft(buildInitialDraft(payload.data.verification));
+        setSuccess("인증 요청이 접수되었습니다. 현재 상태는 검토 중으로 변경되었습니다.");
+      } catch {
         setError("인증 요청 제출에 실패했습니다.");
-        return;
       }
-
-      if (!payload.success) {
-        setError(payload.error?.message ?? "인증 요청 제출에 실패했습니다.");
-        return;
-      }
-
-      setVerification(payload.data.verification);
-      setDraft(buildInitialDraft(payload.data.verification));
-      setSuccess("인증 요청이 접수되었습니다. 현재 상태는 검토 중으로 변경되었습니다.");
     });
   };
 
