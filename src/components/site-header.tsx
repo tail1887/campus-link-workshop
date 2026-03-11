@@ -38,6 +38,12 @@ export function SiteHeader() {
             >
               글쓰기
             </Link>
+            <Link
+              href="/entry"
+              className="text-sm font-semibold text-[color:var(--muted)] hover:text-slate-950"
+            >
+              프로필 진입
+            </Link>
           </nav>
 
           <div className="flex items-center gap-2">
