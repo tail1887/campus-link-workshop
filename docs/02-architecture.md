@@ -21,21 +21,26 @@ flowchart LR
     FE --> CK["HTTP-only Session Cookie"]
     API --> RR["Recruit Repository"]
     API --> IR["Identity Repository"]
+    API --> PR["Profile Communication Repository"]
     RR --> DB["Prisma + PostgreSQL"]
     RR --> SEED["Seed Mock Data"]
     IR --> DB
     IR --> IM["Mock Identity Store"]
+    PR --> DB
+    PR --> PM["Mock Profile Store"]
 ```
 
 설명:
 
 - 프론트 역할: 랜딩, 목록, 상세, 글쓰기, 지원하기 화면 렌더링과 상호작용 처리
-- API 역할: 모집글 API와 함께 Phase 1용 auth / onboarding API 응답 제공
+- API 역할: 모집글 API와 함께 Phase 1 auth / onboarding, Phase 2 profile / resume / verification / inquiry / alert preference API 응답 제공
 - Repository 역할: `RECRUIT_DATA_SOURCE` 값에 따라 PostgreSQL 또는 mock 저장소를 선택
 - Recruit 데이터 저장 방식: 기본값은 seed 데이터와 localStorage fallback, DB 모드에서는 Prisma를 통해 PostgreSQL 사용
 - Identity 데이터 저장 방식: Phase 1 기준으로 같은 data source 모드를 따르며, mock 모드에서는 메모리 저장소와 demo 계정을 사용하고 DB 모드에서는 Prisma `User`, `Session`, `OnboardingState`를 사용한다
+- Profile Communication 데이터 저장 방식: Phase 2 기준으로 같은 data source 모드를 따르며, mock 모드에서는 demo 프로필/이력서/문의/알림 설정 store를 사용하고 DB 모드에서는 Prisma `Profile`, `Resume`, `Verification`, `Inquiry`, `AlertPreference`를 사용한다
 - 세션 경계: 세션 본문은 서버 저장소에 보관하고, 브라우저에는 `campus-link.session` HTTP-only cookie로 세션 식별자만 전달한다
 - 프로필 셸 방식: Phase 1 D 트랙에서는 A 트랙 계약이 머지되기 전까지 branch-local adapter로 사용자/관리자 프로필 셸과 역할별 진입 구조만 제공한다
+- Phase 2 기본 레코드 방식: `Profile`, `Resume`, `Verification`, `AlertPreference`는 저장 레코드가 없어도 identity 기반 fallback contract를 먼저 반환하고, 첫 수정/제출 시 영구 저장 경계에 upsert 한다
 
 ## 3) 레이어 구조
 
@@ -43,10 +48,12 @@ flowchart LR
 - UI Components: 카드, 배지, 헤더, 폼, CTA 등 재사용 컴포넌트
 - Feature Layer: 모집글 목록 필터링, 글쓰기, 지원하기 흐름
 - Identity Contracts: `User`, `Role`, `Session`, `OnboardingState`와 auth context 타입
+- Phase 2 Contracts: `Profile`, `Resume`, `Verification`, `Inquiry`, `AlertPreference`와 각 enum / payload 타입
 - Profile Shell Adapter: A 트랙 계약이 머지되기 전까지 사용자/관리자 프로필 셸에 임시 view model을 공급하는 branch-local adapter
 - Recruit Repository: Prisma/PostgreSQL과 mock 저장소를 전환하는 유틸
 - Identity Repository: mock 계정, 세션, 온보딩 상태를 관리하고 Prisma 저장소와 전환하는 유틸
-- Route Handlers: `/api/posts`, `/api/auth/*`, `/api/onboarding/state` 등 API 응답
+- Profile Communication Repository: profile / resume / verification / inquiry / alert preference 저장 경계를 관리하고 mock/Prisma를 전환하는 유틸
+- Route Handlers: `/api/posts`, `/api/auth/*`, `/api/onboarding/state`, `/api/profile`, `/api/resume`, `/api/verification`, `/api/inquiries`, `/api/alert-preferences` 등 API 응답
 - Session Helper: cookie 기반 현재 세션 조회를 downstream 브랜치가 재사용할 수 있게 제공
 
 현재 프로젝트 구조:
@@ -58,12 +65,19 @@ src/
 ├─ app/
 │  ├─ api/
 │  │  ├─ auth/
+│  │  ├─ alert-preferences/
+│  │  ├─ inquiries/
+│  │  ├─ profile/
+│  │  ├─ resume/
+│  │  ├─ verification/
 │  │  └─ onboarding/
 │  ├─ admin/
 │  ├─ entry/
 │  ├─ login/
 │  ├─ profile/
+│  ├─ resume/
 │  ├─ recruit/
+│  ├─ verification/
 │  └─ page.tsx
 ├─ components/
 ├─ data/
@@ -158,6 +172,115 @@ src/
 - `OnboardingState`는 `User`에 인라인으로 섞지 않고 별도 레코드로 유지한다.
 - signup 직후 기본 상태는 `in_progress / interests`이며, 이후 survey 브랜치가 step별 UI를 이 계약 위에 올린다.
 
+### Entity G. Profile
+
+| 필드 | 타입 | 설명 | 필수 여부 |
+| --- | --- | --- | --- |
+| `userId` | `string` | `User.id`와 동일한 1:1 key | Yes |
+| `headline` | `string` | 프로필 상단 한 줄 소개 | Yes |
+| `intro` | `string` | 자기소개 본문 | Yes |
+| `collaborationStyle` | `"async_first" \| "hybrid" \| "live_sprint" \| "flexible" \| null` | 협업 선호 방식 | No |
+| `weeklyHours` | `"under_3" \| "three_to_six" \| "six_to_ten" \| "ten_plus" \| "flexible" \| null` | 주간 가용 시간 밴드 | No |
+| `contactEmail` | `string \| null` | 프로필 연락 이메일 | No |
+| `openToRoles` | `string[]` | 관심 역할/포지션 | Yes |
+| `links` | `ExternalLink[]` | 외부 링크 목록 | Yes |
+| `createdAt` | `string` | 최초 생성 시각 | Yes |
+| `updatedAt` | `string` | 마지막 수정 시각 | Yes |
+
+경계 메모:
+
+- Phase 1 onboarding survey의 branch-local `intro`, `collaborationStyle`, `weeklyHours`는 최종적으로 이 계약으로 흡수된다.
+- `displayName`, `campus`, `role`은 여전히 `User` source of truth를 따르고 `Profile`에 중복 저장하지 않는다.
+
+### Shared Value H. ExternalLink
+
+| 필드 | 타입 | 설명 |
+| --- | --- | --- |
+| `label` | `string` | 화면 표시 이름 |
+| `url` | `string` | `http/https` URL |
+| `type` | `"portfolio" \| "github" \| "linkedin" \| "blog" \| "other"` | 링크 용도 |
+
+### Entity I. Resume
+
+| 필드 | 타입 | 설명 | 필수 여부 |
+| --- | --- | --- | --- |
+| `userId` | `string` | `User.id`와 동일한 1:1 key | Yes |
+| `title` | `string` | 이력서 제목 | Yes |
+| `summary` | `string` | 요약 소개 | Yes |
+| `skills` | `string[]` | 핵심 스킬 목록 | Yes |
+| `education` | `string` | 학력/소속 요약 | Yes |
+| `experience` | `ResumeExperience[]` | 경험 섹션 | Yes |
+| `projects` | `ResumeProject[]` | 프로젝트 섹션 | Yes |
+| `links` | `ExternalLink[]` | 이력서 링크 | Yes |
+| `visibility` | `"private" \| "shared"` | 공개 범위 | Yes |
+| `createdAt` | `string` | 최초 생성 시각 | Yes |
+| `updatedAt` | `string` | 마지막 수정 시각 | Yes |
+
+보조 계산 규칙:
+
+- `ResumeCompleteness`는 별도 source of truth 엔티티가 아니라 API 응답 시 계산되는 파생 값이다.
+- completeness section은 `summary`, `skills`, `education`, `experience`, `projects`, `links` 6개 구간으로 고정한다.
+
+### Entity J. Verification
+
+| 필드 | 타입 | 설명 | 필수 여부 |
+| --- | --- | --- | --- |
+| `userId` | `string` | `User.id`와 동일한 1:1 key | Yes |
+| `status` | `"unverified" \| "pending" \| "verified" \| "rejected"` | 현재 인증 상태 | Yes |
+| `badge` | `"none" \| "pending" \| "verified"` | UI 배지 표시 상태 | Yes |
+| `method` | `"campus_email" \| "student_card" \| "manual_review" \| null` | 최근 인증 요청 방식 | No |
+| `evidenceLabel` | `string \| null` | 제출 증빙 이름 | No |
+| `evidenceUrl` | `string \| null` | 제출 증빙 링크 | No |
+| `note` | `string \| null` | 제출 메모 | No |
+| `submittedAt` | `string \| null` | 제출 시각 | No |
+| `reviewedAt` | `string \| null` | 검토 완료 시각 | No |
+| `verifiedAt` | `string \| null` | 인증 완료 시각 | No |
+| `rejectionReason` | `string \| null` | 반려 사유 | No |
+| `createdAt` | `string` | 최초 생성 시각 | Yes |
+| `updatedAt` | `string` | 마지막 수정 시각 | Yes |
+
+경계 메모:
+
+- Phase 2 A에서는 사용자 제출과 상태 조회 경계만 고정한다.
+- 운영자 검토 queue와 상태 전환 액션은 Phase 4 admin ops contract에서 확장한다.
+
+### Entity K. Inquiry
+
+| 필드 | 타입 | 설명 | 필수 여부 |
+| --- | --- | --- | --- |
+| `id` | `string` | 문의 식별자 | Yes |
+| `userId` | `string` | 문의 작성 사용자 id | Yes |
+| `category` | `"general" \| "account" \| "verification" \| "resume" \| "report"` | 문의 분류 | Yes |
+| `subject` | `string` | 문의 제목 | Yes |
+| `message` | `string` | 문의 본문 | Yes |
+| `contactEmail` | `string` | 회신 연락처 | Yes |
+| `status` | `"open" \| "in_review" \| "resolved"` | 처리 상태 | Yes |
+| `resolutionSummary` | `string \| null` | 사용자에게 노출할 짧은 처리 결과 | No |
+| `createdAt` | `string` | 생성 시각 | Yes |
+| `updatedAt` | `string` | 마지막 수정 시각 | Yes |
+| `resolvedAt` | `string \| null` | 해결 시각 | No |
+
+경계 메모:
+
+- Phase 2에서는 사용자 단위 inquiry record와 상태 요약만 고정한다.
+- 운영 inbox/thread/audit 구조는 Phase 4에서 별도 계약으로 확장한다.
+
+### Entity L. AlertPreference
+
+| 필드 | 타입 | 설명 | 필수 여부 |
+| --- | --- | --- | --- |
+| `userId` | `string` | `User.id`와 동일한 1:1 key | Yes |
+| `emailEnabled` | `boolean` | 이메일 알림 전체 on/off | Yes |
+| `inAppEnabled` | `boolean` | 앱 내 알림 전체 on/off | Yes |
+| `applicationUpdates` | `boolean` | 지원 상태 알림 수신 여부 | Yes |
+| `verificationUpdates` | `boolean` | 인증 상태 알림 수신 여부 | Yes |
+| `inquiryReplies` | `boolean` | 문의 답변 알림 수신 여부 | Yes |
+| `marketingEnabled` | `boolean` | 홍보/추천 알림 수신 여부 | Yes |
+| `digestFrequency` | `"off" \| "daily" \| "weekly"` | 요약 알림 빈도 | Yes |
+| `quietHours` | `{ start: string \| null; end: string \| null; timezone: string \| null }` | 조용한 시간대 설정 | Yes |
+| `createdAt` | `string` | 최초 생성 시각 | Yes |
+| `updatedAt` | `string` | 마지막 수정 시각 | Yes |
+
 ## 5) 정합성 규칙
 
 - `slug`는 고유해야 한다.
@@ -169,6 +292,13 @@ src/
 - `OnboardingState`는 `User`와 별도 1:1 레코드로 유지하며, survey 진행도와 관심 키워드는 이 레코드에만 기록한다.
 - `RECRUIT_DATA_SOURCE=database`일 때 Recruit와 Identity 모두 PostgreSQL/Prisma를 사용한다.
 - `RECRUIT_DATA_SOURCE=mock`일 때 Recruit는 seed/localStorage fallback을, Identity는 demo 계정과 runtime mock 저장소를 사용한다.
+- `Profile`, `Resume`, `Verification`, `AlertPreference`는 모두 `User.id` 기준 1:1 경계를 유지한다.
+- Phase 2 기본 1:1 레코드가 아직 저장되지 않았더라도 API는 identity 기반 default contract를 먼저 반환하고, 첫 `PUT`/`POST` 시 upsert 한다.
+- `Verification.status=pending`이면 `badge=pending`, `status=verified`이면 `badge=verified`, 그 외에는 `badge=none`이어야 한다.
+- `Verification.status=pending` 또는 `verified` 상태에서는 새 인증 요청을 다시 제출할 수 없다.
+- `Inquiry.contactEmail`은 유효한 이메일이어야 하고, 사용자는 자신의 문의 레코드만 조회한다.
+- `AlertPreference.quietHours.start/end`는 `HH:MM` 24시간 형식을 따른다.
+- `ResumeCompleteness`는 저장소에 별도 보관하지 않고 `Resume` 본문에서 계산한다.
 
 ## 6) 핵심 시퀀스 다이어그램
 
@@ -243,6 +373,60 @@ sequenceDiagram
     A->>R: updateIdentityOnboardingState()
     R->>D: write OnboardingState
     A-->>C: updated onboarding payload
+```
+
+### Flow E. 프로필/이력서 기본 계약 조회
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant K as Session Cookie
+    participant A as Next API
+    participant R as Profile Communication Repository
+    participant D as PostgreSQL or Mock
+
+    C->>A: GET /api/profile or /api/resume
+    A->>K: read session id
+    A->>A: resolve current auth context
+    A->>R: get default-or-stored contract
+    R->>D: read Profile / Resume if exists
+    A-->>C: user-linked profile or resume payload
+```
+
+### Flow F. 인증 요청 제출
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant K as Session Cookie
+    participant A as Next API
+    participant R as Profile Communication Repository
+    participant D as PostgreSQL or Mock
+
+    C->>A: POST /api/verification
+    A->>K: read session id
+    A->>A: validate request + current auth
+    A->>R: submitVerificationRequest()
+    R->>D: upsert Verification
+    A-->>C: pending verification payload
+```
+
+### Flow G. 문의 제출 및 알림 설정 갱신
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant K as Session Cookie
+    participant A as Next API
+    participant R as Profile Communication Repository
+    participant D as PostgreSQL or Mock
+
+    C->>A: POST /api/inquiries or PUT /api/alert-preferences
+    A->>K: read session id
+    A->>A: validate request + current auth
+    A->>R: createInquiry() or updateAlertPreference()
+    R->>D: write Inquiry / AlertPreference
+    A-->>C: updated communication payload
 ```
 
 ## 7) 운영/배포 메모
