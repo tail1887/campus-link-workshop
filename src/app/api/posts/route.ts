@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import {
   buildSlugFromTitle,
   filterPosts,
+  validateRecruitPostInput,
 } from "@/lib/recruit";
+import { normalizeText } from "@/lib/identity";
 import { getCurrentAuthContext } from "@/lib/server/auth-context";
 import {
   createRecruitPost,
@@ -39,46 +41,63 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const authContext = await getCurrentAuthContext();
   const body = (await request.json()) as Partial<CreateRecruitPostInput>;
+  const category =
+    body.category === "study" ||
+    body.category === "project" ||
+    body.category === "hackathon"
+      ? body.category
+      : null;
+  const roles = Array.isArray(body.roles)
+    ? body.roles.map(normalizeText).filter(Boolean)
+    : [];
+  const techStack = Array.isArray(body.techStack)
+    ? body.techStack.map(normalizeText).filter(Boolean)
+    : [];
+  const normalizedInput: CreateRecruitPostInput = {
+    category: category ?? "project",
+    title: normalizeText(body.title ?? ""),
+    campus: normalizeText(body.campus ?? ""),
+    summary: normalizeText(body.summary ?? ""),
+    description: normalizeText(body.description ?? ""),
+    roles,
+    techStack,
+    capacity:
+      typeof body.capacity === "number" && Number.isFinite(body.capacity)
+        ? Math.trunc(body.capacity)
+        : 1,
+    stage: normalizeText(body.stage ?? "아이디어 검증") || "아이디어 검증",
+    deadline: normalizeText(body.deadline ?? ""),
+    ownerName: normalizeText(body.ownerName ?? "새 팀장") || "새 팀장",
+    ownerRole:
+      normalizeText(body.ownerRole ?? "프로젝트 리드") || "프로젝트 리드",
+    meetingStyle:
+      normalizeText(body.meetingStyle ?? "온·오프라인 혼합") ||
+      "온·오프라인 혼합",
+    schedule: normalizeText(body.schedule ?? "세부 일정 협의") || "세부 일정 협의",
+    goal: normalizeText(body.goal ?? "서비스 MVP 완성") || "서비스 MVP 완성",
+    ownerId: authContext.authenticated ? authContext.user.id : null,
+  };
+  const validationMessage =
+    category === null
+      ? "모집 유형을 올바르게 선택해주세요."
+      : validateRecruitPostInput(normalizedInput);
 
-  if (
-    !body.title ||
-    !body.category ||
-    !body.campus ||
-    !body.summary ||
-    !body.description ||
-    !body.deadline ||
-    !body.roles?.length
-  ) {
+  if (validationMessage) {
     return NextResponse.json(
       {
         success: false,
         error: {
           code: "INVALID_INPUT",
-          message: "필수 입력값을 확인해주세요.",
+          message: validationMessage,
         },
       },
       { status: 400 },
     );
   }
 
-  const slug = buildSlugFromTitle(body.title);
+  const slug = buildSlugFromTitle(normalizedInput.title);
   const createdPost = await createRecruitPost({
-    category: body.category,
-    title: body.title,
-    campus: body.campus,
-    summary: body.summary,
-    description: body.description,
-    roles: body.roles,
-    techStack: body.techStack ?? [],
-    capacity: body.capacity ?? 1,
-    stage: body.stage ?? "아이디어 검증",
-    deadline: body.deadline,
-    ownerName: body.ownerName ?? "새 팀장",
-    ownerRole: body.ownerRole ?? "프로젝트 리드",
-    meetingStyle: body.meetingStyle ?? "온·오프라인 혼합",
-    schedule: body.schedule ?? "세부 일정 협의",
-    goal: body.goal ?? "서비스 MVP 완성",
-    ownerId: authContext.authenticated ? authContext.user.id : null,
+    ...normalizedInput,
     slug,
   });
 

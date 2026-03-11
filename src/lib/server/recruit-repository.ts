@@ -1,11 +1,14 @@
+import { recruitPosts as canonicalRecruitPosts } from "@/data/recruit-posts";
 import {
+  curateRecruitPosts,
   createRuntimeApplication,
+  findCuratedRecruitPost,
   createRuntimeRecruitPost,
+  isBrokenRecruitPost,
 } from "@/lib/recruit";
 import {
   createMockApplication,
   createMockPost,
-  findMockPost,
   hasMockDuplicateApplication,
   listMockApplicationsByApplicant,
   listMockPosts,
@@ -13,7 +16,6 @@ import {
 import {
   createPrismaApplication,
   createPrismaPost,
-  findPrismaPost,
   hasPrismaDuplicateApplication,
   listPrismaApplicationsByApplicant,
   listPrismaPosts,
@@ -25,6 +27,7 @@ import {
 import type {
   CreateRecruitApplicationInput,
   CreateRecruitPostInput,
+  RecruitPost,
 } from "@/types/recruit";
 
 export type RecruitDataSource = "mock" | "database";
@@ -33,20 +36,49 @@ export function getRecruitDataSource(): RecruitDataSource {
   return getConfiguredDataSource();
 }
 
+function repairCorruptedSeedPosts(posts: RecruitPost[]) {
+  const canonicalBySlug = new Map(
+    canonicalRecruitPosts.map((post) => [post.slug, post]),
+  );
+
+  return posts.map((post) => {
+    const canonicalPost = canonicalBySlug.get(post.slug);
+
+    if (!canonicalPost || !isBrokenRecruitPost(post)) {
+      return post;
+    }
+
+    return {
+      ...post,
+      ...canonicalPost,
+      id: post.id,
+      slug: post.slug,
+      createdAt: post.createdAt,
+      ownerId: post.ownerId ?? canonicalPost.ownerId ?? null,
+      currentMembers: post.currentMembers,
+      highlight: post.highlight,
+    };
+  });
+}
+
 export async function listRecruitPosts() {
-  return withRepositoryFallback({
+  const posts = await withRepositoryFallback({
     scope: "recruit.listRecruitPosts",
     database: () => listPrismaPosts(),
     mock: () => listMockPosts(),
   });
+
+  return curateRecruitPosts(repairCorruptedSeedPosts(posts));
 }
 
 export async function findRecruitPost(slug: string) {
-  return withRepositoryFallback({
+  const posts = await withRepositoryFallback({
     scope: "recruit.findRecruitPost",
-    database: () => findPrismaPost(slug),
-    mock: () => findMockPost(slug),
+    database: () => listPrismaPosts(),
+    mock: () => listMockPosts(),
   });
+
+  return findCuratedRecruitPost(repairCorruptedSeedPosts(posts), slug);
 }
 
 export async function createRecruitPost(

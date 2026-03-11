@@ -97,6 +97,11 @@ Query:
 - `campus`: 문자열
 - `q`: 제목/요약 검색어
 
+노트:
+
+- 서버는 깨진 텍스트, 비정상 마감일, 중복 seed 성격 게시글을 목록에서 자동으로 제외한다.
+- canonical demo seed와 slug가 같은 게시글이 깨진 상태로 저장돼 있으면 서버가 읽기 시점에 seed 본문으로 복구한다.
+
 Success:
 
 ```json
@@ -123,6 +128,10 @@ Success:
 ```
 
 ### `GET /api/posts/{slug}`
+
+노트:
+
+- 목록 정제 규칙에서 제외된 게시글 slug는 `404`로 응답할 수 있다.
 
 Success:
 
@@ -167,6 +176,12 @@ Request:
 }
 ```
 
+노트:
+
+- `title`, `campus`, `summary`, `description`, `roles`, `deadline`은 필수다.
+- `capacity`는 `1` 이상 `20` 이하 정수여야 한다.
+- 서버는 trim 이후 내용 기준으로 테스트용/반복 입력/깨진 텍스트를 거부한다.
+
 Success:
 
 ```json
@@ -186,6 +201,18 @@ Success:
 - `dataSource`는 현재 저장 모드가 `mock`인지 `database`인지 알려준다.
 - `mock` 모드에서는 클라이언트 localStorage fallback과 함께 동작한다.
 - `database` 모드에서는 PostgreSQL이 source of truth가 된다.
+
+실패 예시:
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "INVALID_INPUT",
+    "message": "테스트용 또는 품질이 낮은 입력은 등록할 수 없습니다."
+  }
+}
+```
 
 ### `POST /api/posts/{slug}/apply`
 
