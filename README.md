@@ -72,6 +72,7 @@ npm run dev
 - macOS/Linux 팀원은 루트의 `.nvmrc` 기준으로 Node.js 24를 맞추면 됩니다.
 - `npm install` 뒤에는 `postinstall`로 Prisma Client가 자동 생성되므로, 새 Mac 환경에서도 바로 타입 체크와 빌드가 안정적으로 맞춰집니다.
 - 기본 실행 모드는 `RECRUIT_DATA_SOURCE="mock"` 이라서 로컬 PostgreSQL이나 `.env` 없이도 바로 화면 확인이 가능합니다.
+- 개발 모드의 mock 회원가입/로그인은 로컬 상태 파일 `.local/mock-identity-state.json`에 유지되어, `npm run dev` 재시작 뒤에도 같은 계정으로 다시 로그인할 수 있습니다.
 
 ### 2) PostgreSQL 전환 시작
 

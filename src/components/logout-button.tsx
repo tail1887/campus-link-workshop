@@ -1,20 +1,18 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 
 export function LogoutButton() {
-  const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   const logout = () => {
     startTransition(async () => {
       await fetch("/api/auth/session", {
         method: "DELETE",
+        credentials: "same-origin",
       });
 
-      router.push("/");
-      router.refresh();
+      window.location.assign("/");
     });
   };
 

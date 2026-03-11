@@ -23,7 +23,7 @@ export function PostCard({
   return (
     <Link
       href={`/recruit/${post.slug}`}
-      className={`panel group flex h-full flex-col rounded-[1.55rem] p-4 sm:rounded-[1.9rem] sm:p-5 ${className ?? ""}`}
+      className={`panel group flex h-full flex-col rounded-[1.55rem] p-4 transition-transform duration-200 ease-out will-change-transform hover:-translate-y-2 hover:scale-[1.02] hover:shadow-[0_32px_72px_rgba(16,35,58,0.2)] sm:rounded-[1.9rem] sm:p-5 ${className ?? ""}`}
       style={style}
     >
       <div className="flex items-start justify-between gap-4">
@@ -37,7 +37,7 @@ export function PostCard({
         >
           {meta.label}
         </div>
-        <div className="rounded-full bg-slate-950 px-3 py-1 text-xs font-semibold text-white">
+        <div className="rounded-full bg-slate-950 px-3 py-1 text-xs font-semibold text-white transition-transform duration-200 ease-out group-hover:scale-105">
           {post.capacity}명 모집
         </div>
       </div>
@@ -60,7 +60,7 @@ export function PostCard({
         {visibleRoles.map((role, index) => (
           <span
             key={role}
-            className={`rounded-full border border-slate-200/80 bg-white/80 px-3 py-1 text-xs font-semibold text-slate-700 ${
+            className={`rounded-full border border-slate-200/80 bg-white/80 px-3 py-1 text-xs font-semibold text-slate-700 transition-colors duration-200 group-hover:border-slate-300 group-hover:bg-white ${
               !compact && index === visibleRoles.length - 1 ? "hidden sm:inline-flex" : ""
             }`}
           >
@@ -70,7 +70,7 @@ export function PostCard({
         {visibleStacks.map((stack, index) => (
           <span
             key={stack}
-            className={`rounded-full bg-[color:var(--teal-soft)] px-3 py-1 text-xs font-semibold text-[color:var(--teal)] ${
+            className={`rounded-full bg-[color:var(--teal-soft)] px-3 py-1 text-xs font-semibold text-[color:var(--teal)] transition-transform duration-200 group-hover:scale-105 ${
               !compact && index === visibleStacks.length - 1 ? "hidden sm:inline-flex" : ""
             }`}
           >
