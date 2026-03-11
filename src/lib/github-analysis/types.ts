@@ -1,38 +1,14 @@
+import type {
+  AiPlatformProviderCatalog,
+  CreateGitHubAnalysisJobRequest,
+  GitHubConnection,
+} from "@/types/ai";
 import type { IdentityDataSource, OnboardingState, User } from "@/types/identity";
 import type { ExternalLink, Profile } from "@/types/profile";
-
-export const githubConnectionStatusValues = [
-  "not_connected",
-  "connected",
-  "syncing",
-  "attention",
-] as const;
-
-export type GithubConnectionStatus =
-  (typeof githubConnectionStatusValues)[number];
-
-export const githubAnalysisStateValues = [
-  "idle",
-  "ready",
-  "refreshing",
-  "failed",
-] as const;
-
-export type GithubAnalysisState = (typeof githubAnalysisStateValues)[number];
 
 export type GithubConnectionDraft = {
   username: string;
   profileUrl: string;
-};
-
-export type GithubConnectionRecord = {
-  username: string;
-  profileUrl: string;
-  source: "profile_link" | "branch_local_demo";
-  status: GithubConnectionStatus;
-  repositoryCount: number;
-  connectedAt: string;
-  lastSyncedAt: string | null;
 };
 
 export type GithubProjectInsight = {
@@ -49,14 +25,15 @@ export type GithubProjectInsight = {
 };
 
 export type GithubAnalysisSnapshot = {
-  state: GithubAnalysisState;
-  generatedAt: string | null;
+  generatedAt: string;
   coverageLabel: string;
   standoutStack: string;
   collaborationFit: string;
   confidenceLabel: string;
+  summary: string;
+  strengths: string[];
   focusAreas: string[];
-  notes: string[];
+  recommendedRoles: string[];
   projects: GithubProjectInsight[];
 };
 
@@ -65,11 +42,6 @@ export type GithubAnalysisProfileContext = {
   onboarding: OnboardingState;
   profile: Profile;
   dataSource: IdentityDataSource;
-};
-
-export type GithubAnalysisStorageRecord = {
-  connection: GithubConnectionRecord | null;
-  analysis: GithubAnalysisSnapshot | null;
 };
 
 export type GithubAnalysisViewModel = {
@@ -86,8 +58,10 @@ export type GithubAnalysisViewModel = {
     admin: Array<{ id: string; title: string; description: string; replaceWhen: string }>;
   };
   initialDraft: GithubConnectionDraft;
-  initialConnection: GithubConnectionRecord | null;
-  initialAnalysis: GithubAnalysisSnapshot | null;
+  initialConnection: GitHubConnection | null;
+  initialAnalysisJobId: string | null;
+  defaultAnalysisRequest: CreateGitHubAnalysisJobRequest;
+  providers: AiPlatformProviderCatalog | null;
   profileContext: GithubAnalysisProfileContext | null;
 };
 
