@@ -57,7 +57,7 @@ export function mergePosts(
   const merged: RecruitPost[] = [];
 
   [...preferredPosts, ...fallbackPosts].forEach((post) => {
-    if (seen.has(post.slug)) {
+    if (seen.has(post.slug) || isBrokenRecruitPost(post)) {
       return;
     }
 
@@ -68,6 +68,35 @@ export function mergePosts(
   return merged.sort((left, right) =>
     right.createdAt.localeCompare(left.createdAt),
   );
+}
+
+function containsBrokenText(value: string) {
+  const normalized = value.trim();
+
+  if (!normalized) {
+    return false;
+  }
+
+  return normalized.includes("�") || /\?[\s?]*\?/.test(normalized);
+}
+
+export function isBrokenRecruitPost(post: RecruitPost) {
+  return [
+    post.title,
+    post.campus,
+    post.summary,
+    post.description,
+    post.stage,
+    post.ownerName,
+    post.ownerRole,
+    post.meetingStyle,
+    post.schedule,
+    post.goal,
+    ...post.roles,
+    ...post.techStack,
+    ...post.expectations,
+    ...post.perks,
+  ].some(containsBrokenText);
 }
 
 export function filterPosts(

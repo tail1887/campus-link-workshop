@@ -25,22 +25,10 @@ export async function SiteHeader() {
 
           <nav className="hidden items-center gap-6 md:flex">
             <Link
-              href="/"
-              className="text-sm font-semibold text-[color:var(--muted)] hover:text-slate-950"
-            >
-              메인
-            </Link>
-            <Link
               href="/recruit"
               className="text-sm font-semibold text-[color:var(--muted)] hover:text-slate-950"
             >
               모집글 목록
-            </Link>
-            <Link
-              href="/recruit/new"
-              className="text-sm font-semibold text-[color:var(--muted)] hover:text-slate-950"
-            >
-              글쓰기
             </Link>
             <Link
               href="/entry"
@@ -59,20 +47,16 @@ export async function SiteHeader() {
           </nav>
 
           <div className="flex items-center gap-2">
-            <Link href="/recruit" className="button-secondary px-4 py-3 text-sm">
-              둘러보기
-            </Link>
             {authContext.authenticated ? (
               <>
-                <div className="hidden rounded-full border border-slate-200/80 bg-white/84 px-4 py-3 text-sm font-semibold text-slate-700 lg:block">
-                  {authContext.user.role === "admin" ? "관리자 세션" : "학생 세션"}
-                </div>
+                {authContext.user.role === "admin" ? (
+                  <div className="hidden rounded-full border border-slate-200/80 bg-white/84 px-4 py-3 text-sm font-semibold text-slate-700 lg:block">
+                    관리자 세션
+                  </div>
+                ) : null}
                 <div className="hidden rounded-full border border-slate-200/80 bg-white/84 px-4 py-3 text-sm font-semibold text-slate-700 xl:block">
                   {authContext.user.email}
                 </div>
-                <Link href="/recruit/new" className="button-primary px-4 py-3 text-sm">
-                  글쓰기
-                </Link>
                 <LogoutButton />
               </>
             ) : (
