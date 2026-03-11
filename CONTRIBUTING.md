@@ -36,11 +36,14 @@ git config commit.template .gitmessage.txt
 - 변경 목적, 테스트 결과, 문서 반영 여부를 꼭 적습니다.
 - UI 변경이 있으면 스크린샷 또는 동작 설명을 남깁니다.
 - API/데이터 구조 변경은 관련 docs와 함께 올립니다.
+- 같은 저장소 내부 브랜치 PR은 열리거나 업데이트될 때 `main` 최신 내용을 자동 병합합니다.
+- 자동 병합 중 충돌이 나면 PR 코멘트를 확인하고 로컬에서 직접 충돌을 해결합니다.
 
 ## CI / CD
 
 - PR to `main`: `npm run lint`, `npm run build`
 - Push to `main`: CI 통과 후 Vercel 프로덕션 자동 배포
+- PR opened / synchronized to `main`: `main` 최신 커밋 자동 동기화 시도
 
 GitHub Secrets:
 

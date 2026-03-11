@@ -64,10 +64,13 @@
 - 변경 목적, 테스트 결과, 문서 반영 여부를 반드시 적는다.
 - UI가 바뀌면 스크린샷 또는 짧은 설명을 넣는다.
 - API나 데이터 구조가 바뀌면 관련 docs를 같은 PR에서 업데이트한다.
+- 같은 저장소 내부 작업 브랜치의 PR은 열리거나 갱신될 때 `main` 최신 내용을 자동 병합 시도한다.
+- 자동 병합 중 충돌이 나면 PR 코멘트 안내에 따라 로컬에서 직접 해결한 뒤 다시 push 한다.
 
 ## 4) CI / CD 규칙
 
 - PR이 `main`으로 들어오면 GitHub Actions가 자동으로 `npm run lint`, `npm run build`를 실행한다.
+- PR이 열리거나 갱신되면 GitHub Actions가 해당 브랜치에 `main` 최신 내용을 자동 병합 시도한다.
 - `main` 머지 후 push가 발생하면 CI 성공을 확인한 뒤 Vercel 프로덕션 배포를 자동 실행한다.
 - 배포 워크플로는 GitHub Secrets의 `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`를 사용한다.
 
@@ -148,6 +151,7 @@
 
 - GitHub 저장소 연결
 - PR CI 구성
+- PR 브랜치 자동 main 동기화 구성
 - main 자동 배포 구성
 - 브랜치 보호 규칙 적용
 
@@ -161,16 +165,35 @@
 4. Vercel 수동 배포 검증 완료
 5. 독립 Git 저장소 초기화
 6. 브랜치 규칙, 커밋 템플릿, PR 템플릿 추가
-7. PR CI와 main 자동 배포 GitHub Actions 추가
+7. PR CI, PR 브랜치 자동 동기화, main 자동 배포 GitHub Actions 추가
 8. GitHub 공개 저장소 생성과 Vercel 시크릿 연결
-9. main 브랜치 보호 규칙 적용 예정
+9. main 브랜치 보호 규칙 적용
 
 현재 완료 상태:
 
 - [x] Vercel 프로덕션 수동 배포
 - [x] PR용 CI 워크플로 작성
+- [x] PR 브랜치 자동 main 동기화 워크플로 작성
 - [x] main 자동 배포 워크플로 작성
 - [x] 브랜치 / 커밋 / PR 규칙 문서화
 - [x] GitHub 저장소 생성 및 첫 push
 - [x] GitHub Secrets 등록
 - [x] main 브랜치 보호 규칙 적용
+
+## 11) 4인 확장 브랜치 계획
+
+현재 MVP 다음 단계에서 4명이 병렬로 움직이려면 아래 순서가 가장 안전하다.
+
+| 순서 | 브랜치 이름 | 핵심 목표 | 선행 의존성 | 병렬 가능 범위 |
+| --- | --- | --- | --- | --- |
+| 1 | `feature/data-foundation` | PostgreSQL/Prisma 도입, 실제 `User`, `RecruitPost`, `Application` 스키마와 repository layer 구축 | 없음 | 다른 브랜치는 mock UI 설계까지만 병행 |
+| 2 | `feature/auth-campus-session` | 로그인, 세션, 학교 이메일 인증 흐름, 보호 라우트 추가 | `feature/data-foundation` 머지 후 | 로그인 화면/폼 UI는 미리 작업 가능 |
+| 3 | `feature/recruit-owner-dashboard` | 내 모집글 관리, 수정/삭제, 지원자 상태 변경, 운영용 대시보드 | `feature/data-foundation`, `feature/auth-campus-session` | 대시보드 레이아웃과 컴포넌트는 mock으로 병행 가능 |
+| 4 | `feature/discovery-bookmark-history` | 고급 검색/정렬, 북마크, 지원 내역, 개인화 홈 확장 | `feature/data-foundation` 필수, `feature/auth-campus-session` 권장 | 검색/정렬 UI는 먼저 작업 가능 |
+
+권장 진행 방식:
+
+1. 1번 브랜치를 가장 먼저 시작하고 가장 먼저 머지한다.
+2. 2번은 1번의 스키마와 인증 토대가 보이면 바로 이어 붙인다.
+3. 3번과 4번은 UI 셸을 현재 main의 mock 데이터로 먼저 만들고, 1번과 2번이 머지된 뒤 실제 API로 교체한다.
+4. 각 브랜치 PR은 1개 목표만 다루고, 선행 브랜치가 머지되면 즉시 `main`을 다시 동기화한다.
