@@ -2,8 +2,8 @@ export type AuthRole = "student" | "admin";
 
 export type AuthStoredUser = {
   id: string;
+  loginId: string;
   name: string;
-  email: string;
   campus: string;
   password: string;
   role: AuthRole;
@@ -12,21 +12,21 @@ export type AuthStoredUser = {
 
 export type AuthSession = {
   userId: string;
+  loginId: string;
   name: string;
-  email: string;
   campus: string;
   role: AuthRole;
   signedInAt: string;
 };
 
 export type LoginInput = {
-  email: string;
+  loginId: string;
   password: string;
 };
 
 export type SignupInput = {
+  loginId: string;
   name: string;
-  email: string;
   campus: string;
   password: string;
 };

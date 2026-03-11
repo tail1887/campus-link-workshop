@@ -3,28 +3,24 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import {
-  isCampusEmail,
-  registerMockUser,
-  signInMockUser,
-} from "@/lib/auth/storage";
+import { registerMockUser, signInMockUser } from "@/lib/auth/storage";
 
 type AuthFormProps = {
   mode: "login" | "signup";
 };
 
 const demoSignup = {
+  loginId: "campusdemo",
   name: "김캠퍼스",
-  email: "demo@campus.ac.kr",
   campus: "서울 캠퍼스",
   password: "campus1234",
 };
 
 export function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter();
+  const [loginId, setLoginId] = useState("");
   const [name, setName] = useState("");
   const [campus, setCampus] = useState("서울 캠퍼스");
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -33,8 +29,8 @@ export function AuthForm({ mode }: AuthFormProps) {
   const isSignup = mode === "signup";
 
   const fillDemo = () => {
+    setLoginId(demoSignup.loginId);
     setName(demoSignup.name);
-    setEmail(demoSignup.email);
     setCampus(demoSignup.campus);
     setPassword(demoSignup.password);
   };
@@ -44,13 +40,8 @@ export function AuthForm({ mode }: AuthFormProps) {
     setError("");
     setSuccess("");
 
-    if (!email.trim() || !password.trim() || (isSignup && !name.trim())) {
+    if (!loginId.trim() || !password.trim() || (isSignup && !name.trim())) {
       setError("필수 입력값을 모두 채워주세요.");
-      return;
-    }
-
-    if (!isCampusEmail(email)) {
-      setError("학교 이메일(.ac.kr)로 가입하거나 로그인해 주세요.");
       return;
     }
 
@@ -62,8 +53,8 @@ export function AuthForm({ mode }: AuthFormProps) {
     startTransition(() => {
       if (isSignup) {
         const result = registerMockUser({
+          loginId,
           name: name.trim(),
-          email,
           campus,
           password,
         });
@@ -80,7 +71,7 @@ export function AuthForm({ mode }: AuthFormProps) {
       }
 
       const result = signInMockUser({
-        email,
+        loginId,
         password,
       });
 
@@ -102,23 +93,23 @@ export function AuthForm({ mode }: AuthFormProps) {
           {isSignup ? "Signup Flow" : "Login Flow"}
         </span>
         <h1 className="section-title mt-5 text-slate-950">
-          {isSignup ? "학교 이메일로 가입하고" : "바로 로그인해서"}
+          {isSignup ? "고유한 ID로 가입하고" : "내 ID로 로그인해서"}
           <br />
           {isSignup ? "팀 탐색 흐름을 시작하세요." : "팀 탐색 흐름을 이어가세요."}
         </h1>
         <p className="section-subtitle mt-4">
-          현재는 브라우저 localStorage 기반 mock 인증입니다. 팀이 실제 세션,
-          학교 인증, 보호 라우트를 붙이기 전에 화면과 사용자 흐름을 먼저
-          맞추기 위한 기반입니다.
+          현재는 브라우저 localStorage 기반 mock 인증입니다. 동명이인 충돌을
+          피하기 위해 로그인 기준은 이름이 아니라 고유한 ID를 사용하고, 이름은
+          프로필 정보로만 저장합니다.
         </p>
 
         <div className="info-grid mt-6">
           {[
             isSignup
               ? "가입 즉시 로그인 상태로 전환됩니다."
-              : "가입한 학교 이메일과 비밀번호로 로그인할 수 있습니다.",
+              : "가입한 ID와 비밀번호로 로그인할 수 있습니다.",
             "데이터는 현재 브라우저에만 저장됩니다.",
-            "`.ac.kr` 형식 이메일만 허용해 캠퍼스 흐름을 먼저 맞춥니다.",
+            "이름은 표시 정보이고, 로그인 식별자는 별도 ID로 관리합니다.",
           ].map((item) => (
             <div
               key={item}
@@ -153,6 +144,15 @@ export function AuthForm({ mode }: AuthFormProps) {
           {isSignup ? (
             <>
               <label className="space-y-2 text-sm font-semibold text-slate-800">
+                아이디
+                <input
+                  value={loginId}
+                  onChange={(event) => setLoginId(event.target.value)}
+                  className="field"
+                  placeholder="예: campusdemo"
+                />
+              </label>
+              <label className="space-y-2 text-sm font-semibold text-slate-800">
                 이름
                 <input
                   value={name}
@@ -171,18 +171,17 @@ export function AuthForm({ mode }: AuthFormProps) {
                 />
               </label>
             </>
-          ) : null}
-
-          <label className="space-y-2 text-sm font-semibold text-slate-800">
-            학교 이메일
-            <input
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              className="field"
-              placeholder="예: me@campus.ac.kr"
-            />
-          </label>
+          ) : (
+            <label className="space-y-2 text-sm font-semibold text-slate-800">
+              아이디
+              <input
+                value={loginId}
+                onChange={(event) => setLoginId(event.target.value)}
+                className="field"
+                placeholder="가입한 ID를 입력해 주세요"
+              />
+            </label>
+          )}
 
           <label className="space-y-2 text-sm font-semibold text-slate-800">
             비밀번호

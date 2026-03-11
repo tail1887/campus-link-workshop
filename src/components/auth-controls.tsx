@@ -39,7 +39,7 @@ export function AuthControls() {
       <div className="hidden rounded-full border border-white/70 bg-white/78 px-4 py-3 text-right md:block">
         <p className="text-sm font-semibold text-slate-950">{session.name}</p>
         <p className="text-xs font-medium text-[color:var(--muted)]">
-          {session.campus}
+          {session.loginId} / {session.campus}
         </p>
       </div>
       <button

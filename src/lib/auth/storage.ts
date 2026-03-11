@@ -48,12 +48,8 @@ function emitAuthChange() {
   window.dispatchEvent(new Event(AUTH_EVENT));
 }
 
-function normalizeEmail(email: string) {
-  return email.trim().toLowerCase();
-}
-
-export function isCampusEmail(email: string) {
-  return normalizeEmail(email).endsWith(".ac.kr");
+function normalizeLoginId(loginId: string) {
+  return loginId.trim().toLowerCase();
 }
 
 export function getStoredAuthUsers() {
@@ -99,20 +95,20 @@ export function subscribeAuthChange(listener: () => void) {
 }
 
 export function registerMockUser(input: SignupInput) {
-  const email = normalizeEmail(input.email);
+  const loginId = normalizeLoginId(input.loginId);
   const users = getStoredAuthUsers();
 
-  if (users.some((user) => user.email === email)) {
+  if (users.some((user) => user.loginId === loginId)) {
     return {
       ok: false as const,
-      message: "이미 가입된 학교 이메일입니다.",
+      message: "이미 사용 중인 ID입니다.",
     };
   }
 
   const nextUser: AuthStoredUser = {
     id: `user_${Date.now().toString(36)}`,
+    loginId,
     name: input.name.trim(),
-    email,
     campus: input.campus.trim(),
     password: input.password,
     role: "student",
@@ -123,8 +119,8 @@ export function registerMockUser(input: SignupInput) {
 
   const session: AuthSession = {
     userId: nextUser.id,
+    loginId: nextUser.loginId,
     name: nextUser.name,
-    email: nextUser.email,
     campus: nextUser.campus,
     role: nextUser.role,
     signedInAt: new Date().toISOString(),
@@ -140,22 +136,22 @@ export function registerMockUser(input: SignupInput) {
 }
 
 export function signInMockUser(input: LoginInput) {
-  const email = normalizeEmail(input.email);
+  const loginId = normalizeLoginId(input.loginId);
   const user = getStoredAuthUsers().find(
-    (item) => item.email === email && item.password === input.password,
+    (item) => item.loginId === loginId && item.password === input.password,
   );
 
   if (!user) {
     return {
       ok: false as const,
-      message: "이메일 또는 비밀번호를 다시 확인해주세요.",
+      message: "ID 또는 비밀번호를 다시 확인해주세요.",
     };
   }
 
   const session: AuthSession = {
     userId: user.id,
+    loginId: user.loginId,
     name: user.name,
-    email: user.email,
     campus: user.campus,
     role: user.role,
     signedInAt: new Date().toISOString(),
