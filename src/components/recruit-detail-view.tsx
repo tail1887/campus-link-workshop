@@ -1,8 +1,11 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ApplyPanel } from "@/components/apply-panel";
+import { buildAvatarDataUrl } from "@/lib/avatar";
+import { getRecruitAuthorProfileHref } from "@/lib/public-profile";
 import { categoryMeta, formatDateLabel, formatDateTimeLabel } from "@/lib/recruit";
 import { getStoredApplications, getStoredPosts } from "@/lib/storage";
 import type { RecruitPost } from "@/types/recruit";
@@ -81,6 +84,11 @@ export function RecruitDetailView({
   }
 
   const meta = categoryMeta[post.category];
+  const authorProfileHref = getRecruitAuthorProfileHref(post);
+  const authorAvatar = buildAvatarDataUrl(
+    post.ownerId ?? `${post.slug}:${post.ownerName}`,
+    post.ownerName,
+  );
 
   return (
     <div className="shell space-y-8 pb-8 pt-6">
@@ -231,12 +239,24 @@ export function RecruitDetailView({
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
                 Team Lead
               </p>
-              <h2 className="mt-3 text-2xl font-semibold text-slate-950">
-                {post.ownerName}
-              </h2>
-              <p className="mt-1 text-sm font-medium text-[color:var(--muted)]">
-                {post.ownerRole}
-              </p>
+              <div className="mt-4 flex items-center gap-4">
+                <Image
+                  src={authorAvatar}
+                  alt={`${post.ownerName} 프로필 이미지`}
+                  width={80}
+                  height={80}
+                  unoptimized
+                  className="h-20 w-20 rounded-[1.4rem] border border-slate-200/80 object-cover"
+                />
+                <div>
+                  <h2 className="text-2xl font-semibold text-slate-950">
+                    {post.ownerName}
+                  </h2>
+                  <p className="mt-1 text-sm font-medium text-[color:var(--muted)]">
+                    {post.ownerRole}
+                  </p>
+                </div>
+              </div>
               <div className="mt-5 grid gap-3 text-sm leading-7 text-[color:var(--muted)]">
                 <div className="rounded-[1.25rem] bg-white/82 px-4 py-3">
                   <span className="font-semibold text-slate-900">활동 일정</span>
@@ -251,6 +271,9 @@ export function RecruitDetailView({
                   <p>{localApplyCount}건</p>
                 </div>
               </div>
+              <Link href={authorProfileHref} className="button-ghost mt-5 w-full justify-center">
+                작성자 프로필 보기
+              </Link>
             </div>
             <ApplyPanel post={post} currentUser={currentUser} />
           </aside>

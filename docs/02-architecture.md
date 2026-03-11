@@ -90,6 +90,7 @@ src/
 │  ├─ entry/
 │  ├─ login/
 │  ├─ profile/
+│  ├─ people/
 │  ├─ resume/
 │  ├─ recruit/
 │  ├─ verification/

@@ -2,6 +2,8 @@ import {
   getVerificationBadgeLabel,
   getVerificationStatusLabel,
 } from "@/lib/verification-ui";
+import { buildAvatarDataUrl } from "@/lib/avatar";
+import type { Profile } from "@/types/profile";
 import type { AuthContext, Role } from "@/types/identity";
 import type { Verification } from "@/types/profile";
 
@@ -13,6 +15,16 @@ export type ProfileShellViewModel = {
   title: string;
   subtitle: string;
   badge: string;
+  avatar: {
+    src: string;
+    alt: string;
+  };
+  identity: {
+    name: string;
+    roleLabel: string;
+    headline: string;
+    campus: string;
+  };
   ctaHref: string;
   ctaLabel: string;
   verificationSummary: {
@@ -22,6 +34,12 @@ export type ProfileShellViewModel = {
     href: string;
   } | null;
   summaryCards: Array<{ label: string; value: string }>;
+  managementLinks: Array<{
+    title: string;
+    description: string;
+    href: string;
+    value?: string;
+  }>;
   checklist: string[];
   modules: Array<{ title: string; description: string; state: string; href?: string }>;
   notes: string[];
@@ -57,8 +75,18 @@ export function buildProfileShellViewModel(input: {
   authContext: AuthContext;
   role: ProfileShellRole;
   verification?: Verification | null;
+  profile?: Profile | null;
+  managedPostCount?: number;
+  applicationCount?: number;
 }): ProfileShellViewModel {
-  const { authContext, role, verification = null } = input;
+  const {
+    authContext,
+    role,
+    verification = null,
+    profile = null,
+    managedPostCount = 0,
+    applicationCount = 0,
+  } = input;
 
   if (!authContext.authenticated) {
     return {
@@ -71,6 +99,16 @@ export function buildProfileShellViewModel(input: {
       subtitle:
         "Phase 1 A 계약이 연결되는 전제를 유지하면서, 현재 브랜치에서는 역할별 기본 프로필 화면 구조만 먼저 고정합니다.",
       badge: "Guest Preview",
+      avatar: {
+        src: buildAvatarDataUrl(`guest:${role}`, role === "admin" ? "관리자" : "사용자"),
+        alt: "게스트 프로필 이미지",
+      },
+      identity: {
+        name: role === "admin" ? "관리자 미리보기" : "사용자 미리보기",
+        roleLabel: role === "admin" ? "admin" : "student",
+        headline: "로그인 후 실제 프로필 요약과 관리 메뉴가 채워집니다.",
+        campus: "세션 없음",
+      },
       ctaHref: "/entry",
       ctaLabel: "역할별 진입 구조 보기",
       verificationSummary: null,
@@ -79,6 +117,20 @@ export function buildProfileShellViewModel(input: {
         { label: "대상 셸", value: role === "admin" ? "관리자" : "사용자" },
         { label: "계약 연결", value: "branch-local adapter" },
       ],
+      managementLinks: role === "student"
+        ? [
+            {
+              title: "내 모집 글 관리",
+              description: "로그인 후 내가 작성한 모집글을 다시 열고 관리합니다.",
+              href: "/profile/recruits",
+            },
+            {
+              title: "내 참가 글 관리",
+              description: "로그인 후 지원한 모집글과 접수 상태를 확인합니다.",
+              href: "/profile/applications",
+            },
+          ]
+        : [],
       checklist: [
         "로그인 세션 연결 슬롯 유지",
         "기본 프로필 요약 카드 자리 확보",
@@ -172,8 +224,24 @@ export function buildProfileShellViewModel(input: {
     title: isAdminShell ? "관리자 기본 프로필 셸" : "사용자 기본 프로필 셸",
     subtitle: isAdminShell
       ? "운영 역할, 관리자 기본 정보, 후속 운영 도구 진입점을 담는 Phase 1 D 셸입니다."
-      : "개인 소개, 관심 키워드, 후속 인증 및 이력서 작업을 연결하는 Phase 1 D 셸입니다.",
+      : profile?.headline
+        ? profile.headline
+        : "개인 소개, 관심 키워드, 후속 인증 및 이력서 작업을 연결하는 Phase 1 D 셸입니다.",
     badge: isAdminShell ? "Admin Shell" : "User Shell",
+    avatar: {
+      src: buildAvatarDataUrl(authContext.user.id, authContext.user.displayName),
+      alt: `${authContext.user.displayName} 프로필 이미지`,
+    },
+    identity: {
+      name: authContext.user.displayName,
+      roleLabel: actualRole === "admin" ? "admin" : "student",
+      headline:
+        profile?.intro ||
+        (actualRole === "admin"
+          ? "운영 표면과 검수 흐름을 관리하는 관리자 세션입니다."
+          : "캠퍼스 프로젝트와 스터디 흐름을 관리하는 사용자 세션입니다."),
+      campus: authContext.user.campus ?? "캠퍼스 미입력",
+    },
     ctaHref: getRoleRoute(actualRole),
     ctaLabel: roleMismatch
       ? `${actualRole === "admin" ? "관리자" : "사용자"} 기본 셸로 이동`
@@ -192,6 +260,23 @@ export function buildProfileShellViewModel(input: {
             : getRoleLabel(actualRole),
       },
     ],
+    managementLinks:
+      actualRole === "student"
+        ? [
+            {
+              title: "내 모집 글 관리",
+              description: "작성한 모집글을 다시 열고 상세 화면으로 바로 이동합니다.",
+              href: "/profile/recruits",
+              value: `${managedPostCount}개`,
+            },
+            {
+              title: "내 참가 글 관리",
+              description: "지원한 모집글과 현재 접수 상태를 한 곳에서 확인합니다.",
+              href: "/profile/applications",
+              value: `${applicationCount}건`,
+            },
+          ]
+        : [],
     checklist: isAdminShell
       ? [
           "관리자 역할 배지 유지",
