@@ -45,11 +45,11 @@ export function PostCard({
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
             {post.campus}
           </p>
-          <h3 className="text-xl font-semibold leading-8 text-slate-950 group-hover:text-[color:var(--accent-strong)]">
+          <h3 className="break-words text-xl font-semibold leading-8 text-slate-950 [overflow-wrap:anywhere] group-hover:text-[color:var(--accent-strong)]">
             {post.title}
           </h3>
         </div>
-        <p className="text-sm leading-7 text-[color:var(--muted)]">
+        <p className="break-words text-sm leading-7 text-[color:var(--muted)] [overflow-wrap:anywhere]">
           {post.summary}
         </p>
       </div>

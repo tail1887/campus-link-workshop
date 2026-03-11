@@ -2,8 +2,20 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { categoryMeta, formatDateLabel, mergePosts } from "@/lib/recruit";
-import { getStoredPostsByOwner } from "@/lib/storage";
+import {
+  categoryMeta,
+  closeRecruitPost,
+  deleteRecruitPost,
+  formatDateLabel,
+  isRecruitPostClosed,
+  mergePosts,
+} from "@/lib/recruit";
+import {
+  getStoredApplicationCountByPost,
+  getStoredPostsByOwner,
+  RECRUIT_STORAGE_SYNC_EVENT,
+  updateStoredPost,
+} from "@/lib/storage";
 import type { RecruitPost } from "@/types/recruit";
 
 type MyRecruitPostsPanelProps = {
@@ -24,7 +36,11 @@ export function MyRecruitPostsPanel({
 
     sync();
     window.addEventListener("storage", sync);
-    return () => window.removeEventListener("storage", sync);
+    window.addEventListener(RECRUIT_STORAGE_SYNC_EVENT, sync);
+    return () => {
+      window.removeEventListener("storage", sync);
+      window.removeEventListener(RECRUIT_STORAGE_SYNC_EVENT, sync);
+    };
   }, [userId]);
 
   const managedPosts = mergePosts(localPosts, initialPosts).filter(
@@ -55,7 +71,7 @@ export function MyRecruitPostsPanel({
             { label: "내 모집 글", value: managedPosts.length },
             {
               label: "진행 중",
-              value: managedPosts.filter((post) => !post.stage.includes("완료")).length,
+              value: managedPosts.filter((post) => !isRecruitPostClosed(post)).length,
             },
             {
               label: "가장 가까운 마감",
@@ -84,54 +100,87 @@ export function MyRecruitPostsPanel({
             const meta = categoryMeta[post.category];
 
             return (
-              <Link
-                key={post.slug}
-                href={`/recruit/${post.slug}`}
-                className="panel rounded-[1.8rem] p-5"
-              >
-                <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="space-y-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span
-                        className="rounded-full px-3 py-1 text-xs font-semibold"
-                        style={{
-                          color: meta.text,
-                          background: meta.surface,
-                          border: `1px solid ${meta.border}`,
-                        }}
-                      >
-                        {meta.label}
-                      </span>
-                      <span className="rounded-full border border-slate-200/80 bg-white/84 px-3 py-1 text-xs font-semibold text-slate-700">
-                        {post.stage}
-                      </span>
+              <div key={post.slug} className="panel rounded-[1.8rem] p-5">
+                <Link href={`/recruit/${post.slug}`} className="block">
+                  <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className="rounded-full px-3 py-1 text-xs font-semibold"
+                          style={{
+                            color: meta.text,
+                            background: meta.surface,
+                            border: `1px solid ${meta.border}`,
+                          }}
+                        >
+                          {meta.label}
+                        </span>
+                        <span className="rounded-full border border-slate-200/80 bg-white/84 px-3 py-1 text-xs font-semibold text-slate-700">
+                          {post.stage}
+                        </span>
+                      </div>
+                      <div>
+                        <h2 className="break-words text-2xl font-semibold text-slate-950 [overflow-wrap:anywhere]">
+                          {post.title}
+                        </h2>
+                        <p className="mt-2 break-words text-sm leading-7 text-[color:var(--muted)] [overflow-wrap:anywhere]">
+                          {post.summary}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h2 className="text-2xl font-semibold text-slate-950">
-                        {post.title}
-                      </h2>
-                      <p className="mt-2 text-sm leading-7 text-[color:var(--muted)]">
-                        {post.summary}
-                      </p>
-                    </div>
-                  </div>
 
-                  <div className="grid gap-3 text-sm leading-7 text-[color:var(--muted)] lg:min-w-[230px]">
-                    <div className="rounded-[1.25rem] bg-white/82 px-4 py-3">
-                      <span className="font-semibold text-slate-900">캠퍼스</span>
-                      <p>{post.campus}</p>
-                    </div>
-                    <div className="rounded-[1.25rem] bg-white/82 px-4 py-3">
-                      <span className="font-semibold text-slate-900">마감일</span>
-                      <p>{formatDateLabel(post.deadline)}</p>
-                    </div>
-                    <div className="rounded-[1.25rem] bg-white/82 px-4 py-3">
-                      <span className="font-semibold text-slate-900">모집 역할</span>
-                      <p>{post.roles.join(", ")}</p>
+                    <div className="grid gap-3 text-sm leading-7 text-[color:var(--muted)] lg:min-w-[230px]">
+                      <div className="rounded-[1.25rem] bg-white/82 px-4 py-3">
+                        <span className="font-semibold text-slate-900">캠퍼스</span>
+                        <p>{post.campus}</p>
+                      </div>
+                      <div className="rounded-[1.25rem] bg-white/82 px-4 py-3">
+                        <span className="font-semibold text-slate-900">마감일</span>
+                        <p>{formatDateLabel(post.deadline)}</p>
+                      </div>
+                      <div className="rounded-[1.25rem] bg-white/82 px-4 py-3">
+                        <span className="font-semibold text-slate-900">모집 역할</span>
+                        <p>{post.roles.join(", ")}</p>
+                      </div>
+                      <div className="rounded-[1.25rem] bg-white/82 px-4 py-3">
+                        <span className="font-semibold text-slate-900">지원 수</span>
+                        <p>{getStoredApplicationCountByPost(post.slug)}건</p>
+                      </div>
                     </div>
                   </div>
+                </Link>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      updateStoredPost(
+                        isRecruitPostClosed(post)
+                          ? {
+                              ...post,
+                              stage: "모집 중",
+                              updatedAt: new Date().toISOString(),
+                              deletedAt: null,
+                            }
+                          : closeRecruitPost(post),
+                      );
+                    }}
+                    className="button-secondary px-4 py-2 text-sm"
+                  >
+                    {isRecruitPostClosed(post) ? "모집 재개" : "모집 마감"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      updateStoredPost(deleteRecruitPost(post));
+                    }}
+                    className="button-ghost px-4 py-2 text-sm text-rose-600"
+                  >
+                    삭제
+                  </button>
                 </div>
-              </Link>
+              </div>
             );
           })}
         </section>

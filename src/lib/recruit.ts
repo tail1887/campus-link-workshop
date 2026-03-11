@@ -50,6 +50,21 @@ export const categoryFilters: Array<{
   { value: "hackathon", label: "해커톤" },
 ];
 
+export const recruitPostFieldLimits = {
+  title: 60,
+  campus: 30,
+  summary: 120,
+  description: 1200,
+  rolesText: 100,
+  techStackText: 120,
+  stage: 30,
+  ownerName: 24,
+  ownerRole: 40,
+  meetingStyle: 30,
+  schedule: 80,
+  goal: 120,
+} as const;
+
 const MIN_RECRUIT_DEADLINE_YEAR = 2024;
 const MAX_RECRUIT_DEADLINE_YEAR = 2100;
 const HANGUL_JAMO_PATTERN = /[ㄱ-ㅎㅏ-ㅣ]{3,}/u;
@@ -125,7 +140,9 @@ function buildRecruitPostFingerprint(post: RecruitPost) {
 
 function sortRecruitPosts(posts: RecruitPost[]) {
   return [...posts].sort((left, right) =>
-    right.createdAt.localeCompare(left.createdAt),
+    (right.updatedAt ?? right.createdAt).localeCompare(
+      left.updatedAt ?? left.createdAt,
+    ),
   );
 }
 
@@ -167,7 +184,7 @@ export function curateRecruitPosts(posts: RecruitPost[]) {
     curated.push(post);
   });
 
-  return curated;
+  return curated.filter((post) => !post.deletedAt);
 }
 
 export function findCuratedRecruitPost(posts: RecruitPost[], slug: string) {
@@ -179,6 +196,31 @@ export function mergePosts(
   fallbackPosts: RecruitPost[],
 ) {
   return curateRecruitPosts([...preferredPosts, ...fallbackPosts]);
+}
+
+export function isRecruitPostClosed(post: RecruitPost) {
+  return post.stage.trim() === "모집 마감";
+}
+
+export function closeRecruitPost(post: RecruitPost): RecruitPost {
+  const now = new Date().toISOString();
+
+  return {
+    ...post,
+    stage: "모집 마감",
+    updatedAt: now,
+    deletedAt: null,
+  };
+}
+
+export function deleteRecruitPost(post: RecruitPost): RecruitPost {
+  const now = new Date().toISOString();
+
+  return {
+    ...post,
+    updatedAt: now,
+    deletedAt: now,
+  };
 }
 
 export function isBrokenRecruitPost(post: RecruitPost) {
@@ -285,6 +327,8 @@ export function buildSlugFromTitle(title: string) {
 export function createRuntimeRecruitPost(
   input: CreateRecruitPostInput & { slug: string },
 ): RecruitPost {
+  const createdAt = new Date().toISOString();
+
   return {
     id: `mock_post_${Date.now()}`,
     slug: input.slug,
@@ -299,9 +343,11 @@ export function createRuntimeRecruitPost(
     currentMembers: 2,
     stage: input.stage,
     deadline: input.deadline,
-    createdAt: new Date().toISOString(),
+    createdAt,
+    updatedAt: createdAt,
     highlight: true,
     ownerId: input.ownerId ?? null,
+    deletedAt: null,
     ownerName: input.ownerName,
     ownerRole: input.ownerRole,
     meetingStyle: input.meetingStyle,
@@ -337,6 +383,27 @@ export function validateRecruitPostInput(input: CreateRecruitPostInput) {
 
   if (!Number.isInteger(input.capacity) || input.capacity < 1 || input.capacity > 20) {
     return "모집 인원은 1명 이상 20명 이하로 입력해주세요.";
+  }
+
+  const textLengthRules = [
+    [input.title, recruitPostFieldLimits.title, "제목"],
+    [input.campus, recruitPostFieldLimits.campus, "캠퍼스"],
+    [input.summary, recruitPostFieldLimits.summary, "카드 요약"],
+    [input.description, recruitPostFieldLimits.description, "상세 설명"],
+    [input.stage, recruitPostFieldLimits.stage, "진행 단계"],
+    [input.ownerName, recruitPostFieldLimits.ownerName, "팀장 이름"],
+    [input.ownerRole, recruitPostFieldLimits.ownerRole, "팀장 역할"],
+    [input.meetingStyle, recruitPostFieldLimits.meetingStyle, "진행 방식"],
+    [input.schedule, recruitPostFieldLimits.schedule, "활동 일정"],
+    [input.goal, recruitPostFieldLimits.goal, "이번 팀의 목표"],
+  ] as const;
+
+  const invalidLengthField = textLengthRules.find(
+    ([value, maxLength]) => normalizeText(value).length > maxLength,
+  );
+
+  if (invalidLengthField) {
+    return `${invalidLengthField[2]}은(는) ${invalidLengthField[1]}자 이하로 입력해주세요.`;
   }
 
   if (hasInvalidRecruitDeadline(input.deadline)) {

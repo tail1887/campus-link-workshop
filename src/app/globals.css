@@ -237,6 +237,7 @@ a {
   padding: 0.95rem 1rem;
   color: var(--foreground);
   outline: none;
+  overflow-wrap: anywhere;
 }
 
 .field::placeholder {
@@ -251,6 +252,7 @@ a {
 .textarea {
   min-height: 140px;
   resize: vertical;
+  white-space: pre-wrap;
 }
 
 .section-title {

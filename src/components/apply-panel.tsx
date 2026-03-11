@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { addStoredApplication, getStoredApplications } from "@/lib/storage";
+import { isRecruitPostClosed } from "@/lib/recruit";
+import {
+  addStoredApplication,
+  getStoredApplicationCountByPost,
+  getStoredApplications,
+  RECRUIT_STORAGE_SYNC_EVENT,
+} from "@/lib/storage";
 import type { RecruitApplication, RecruitPost } from "@/types/recruit";
 
 type CurrentUser = {
@@ -22,26 +28,33 @@ export function ApplyPanel({ post, currentUser }: ApplyPanelProps) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [appliedCount, setAppliedCount] = useState(() =>
-    getStoredApplications().filter((item) => item.postSlug === post.slug).length,
+    getStoredApplicationCountByPost(post.slug),
   );
   const [isPending, startTransition] = useTransition();
+  const isClosed = isRecruitPostClosed(post);
 
   useEffect(() => {
     const sync = () => {
-      setAppliedCount(
-        getStoredApplications().filter((item) => item.postSlug === post.slug)
-          .length,
-      );
+      setAppliedCount(getStoredApplicationCountByPost(post.slug));
     };
 
     window.addEventListener("storage", sync);
-    return () => window.removeEventListener("storage", sync);
+    window.addEventListener(RECRUIT_STORAGE_SYNC_EVENT, sync);
+    return () => {
+      window.removeEventListener("storage", sync);
+      window.removeEventListener(RECRUIT_STORAGE_SYNC_EVENT, sync);
+    };
   }, [post.slug]);
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
     setSuccess("");
+
+    if (isClosed) {
+      setError("마감된 모집글은 더 이상 지원할 수 없습니다.");
+      return;
+    }
 
     if (!name.trim() || !contact.trim() || !message.trim()) {
       setError("이름, 연락처, 메시지를 모두 입력해주세요.");
@@ -125,8 +138,9 @@ export function ApplyPanel({ post, currentUser }: ApplyPanelProps) {
       </div>
 
       <p className="mt-3 text-sm leading-7 text-[color:var(--muted)]">
-        기본값은 브라우저 fallback 저장으로 동작합니다. PostgreSQL 모드로
-        전환하면 서버 저장과 중복 지원 방지 흐름을 함께 검증할 수 있습니다.
+        {isClosed
+          ? "이 모집글은 마감되어 지원 접수가 닫혀 있습니다."
+          : "기본값은 브라우저 fallback 저장으로 동작합니다. PostgreSQL 모드로 전환하면 서버 저장과 중복 지원 방지 흐름을 함께 검증할 수 있습니다."}
       </p>
 
       <form className="mt-5 space-y-3" onSubmit={handleSubmit}>
@@ -135,18 +149,21 @@ export function ApplyPanel({ post, currentUser }: ApplyPanelProps) {
           onChange={(event) => setName(event.target.value)}
           className="field"
           placeholder="이름 또는 닉네임"
+          disabled={isClosed}
         />
         <input
           value={contact}
           onChange={(event) => setContact(event.target.value)}
           className="field"
           placeholder="이메일 또는 오픈채팅 링크"
+          disabled={isClosed}
         />
         <textarea
           value={message}
           onChange={(event) => setMessage(event.target.value)}
           className="field textarea"
           placeholder="간단한 자기소개와 지원 동기를 입력해 주세요"
+          disabled={isClosed}
         />
         {error ? (
           <div className="rounded-[1.25rem] bg-rose-50 px-4 py-3 text-sm font-medium text-rose-600">
@@ -160,10 +177,14 @@ export function ApplyPanel({ post, currentUser }: ApplyPanelProps) {
         ) : null}
         <button
           type="submit"
-          disabled={isPending}
+          disabled={isPending || isClosed}
           className="button-primary w-full disabled:cursor-not-allowed disabled:opacity-70"
         >
-          {isPending ? "지원 접수 중..." : "지원하기 보내기"}
+          {isClosed
+            ? "모집이 마감되었습니다"
+            : isPending
+              ? "지원 접수 중..."
+              : "지원하기 보내기"}
         </button>
       </form>
     </div>

@@ -12,6 +12,7 @@ import {
   type PostAiAssistSuggestions,
   type PostAiAssistTarget,
 } from "@/lib/post-ai-assist/adapter";
+import { recruitPostFieldLimits } from "@/lib/recruit";
 import { addStoredPost } from "@/lib/storage";
 import type { ApiError, ApiSuccess } from "@/types/identity";
 import type { AiSuggestionJobPayload } from "@/types/ai";
@@ -86,6 +87,24 @@ function parseCommaSeparatedText(value: string) {
     .filter(Boolean);
 }
 
+function limitText(value: string, maxLength: number) {
+  return value.slice(0, maxLength);
+}
+
+function CharacterCount({
+  value,
+  maxLength,
+}: {
+  value: string;
+  maxLength: number;
+}) {
+  return (
+    <p className="text-right text-xs font-medium text-[color:var(--muted)]">
+      {value.length}/{maxLength}
+    </p>
+  );
+}
+
 function buildPostAssistDraft(draft: DraftState): BranchLocalPostAssistDraft {
   return {
     category: draft.category,
@@ -126,7 +145,9 @@ function toPreviewPost(draft: DraftState): RecruitPost {
     stage: draft.stage || "진행 단계",
     deadline: draft.deadline,
     createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
     highlight: true,
+    deletedAt: null,
     ownerName: draft.ownerName || "팀장 이름",
     ownerRole: draft.ownerRole || "팀장 역할",
     meetingStyle: draft.meetingStyle || "진행 방식",
@@ -397,6 +418,7 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
         id: result.data.id,
         slug: result.data.slug,
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         ownerId: currentUser.id,
       };
 
@@ -450,9 +472,19 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
               캠퍼스
               <input
                 value={draft.campus}
-                onChange={(event) => updateField("campus", event.target.value)}
+                onChange={(event) =>
+                  updateField(
+                    "campus",
+                    limitText(event.target.value, recruitPostFieldLimits.campus),
+                  )
+                }
                 className="field"
                 placeholder="예: 서울 캠퍼스"
+                maxLength={recruitPostFieldLimits.campus}
+              />
+              <CharacterCount
+                value={draft.campus}
+                maxLength={recruitPostFieldLimits.campus}
               />
             </label>
           </div>
@@ -461,19 +493,39 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
             제목
             <input
               value={draft.title}
-              onChange={(event) => updateField("title", event.target.value)}
+              onChange={(event) =>
+                updateField(
+                  "title",
+                  limitText(event.target.value, recruitPostFieldLimits.title),
+                )
+              }
               className="field"
               placeholder="예: AI 서비스 팀원 모집"
+              maxLength={recruitPostFieldLimits.title}
+            />
+            <CharacterCount
+              value={draft.title}
+              maxLength={recruitPostFieldLimits.title}
             />
           </label>
 
           <label className="space-y-2 text-sm font-semibold text-slate-800">
             카드 요약
-            <input
+            <textarea
               value={draft.summary}
-              onChange={(event) => updateField("summary", event.target.value)}
-              className="field"
+              onChange={(event) =>
+                updateField(
+                  "summary",
+                  limitText(event.target.value, recruitPostFieldLimits.summary),
+                )
+              }
+              className="field textarea min-h-[110px]"
               placeholder="목록 카드에 보일 한 줄 설명"
+              maxLength={recruitPostFieldLimits.summary}
+            />
+            <CharacterCount
+              value={draft.summary}
+              maxLength={recruitPostFieldLimits.summary}
             />
           </label>
 
@@ -481,9 +533,19 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
             상세 설명
             <textarea
               value={draft.description}
-              onChange={(event) => updateField("description", event.target.value)}
+              onChange={(event) =>
+                updateField(
+                  "description",
+                  limitText(event.target.value, recruitPostFieldLimits.description),
+                )
+              }
               className="field textarea"
               placeholder="팀이 어떤 목표를 가지고 있고 어떤 사람을 찾는지 적어주세요"
+              maxLength={recruitPostFieldLimits.description}
+            />
+            <CharacterCount
+              value={draft.description}
+              maxLength={recruitPostFieldLimits.description}
             />
           </label>
 
@@ -492,18 +554,38 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
               모집 역할
               <input
                 value={draft.rolesText}
-                onChange={(event) => updateField("rolesText", event.target.value)}
+                onChange={(event) =>
+                  updateField(
+                    "rolesText",
+                    limitText(event.target.value, recruitPostFieldLimits.rolesText),
+                  )
+                }
                 className="field"
                 placeholder="예: Frontend, Backend"
+                maxLength={recruitPostFieldLimits.rolesText}
+              />
+              <CharacterCount
+                value={draft.rolesText}
+                maxLength={recruitPostFieldLimits.rolesText}
               />
             </label>
             <label className="space-y-2 text-sm font-semibold text-slate-800">
               기술 스택
               <input
                 value={draft.techStackText}
-                onChange={(event) => updateField("techStackText", event.target.value)}
+                onChange={(event) =>
+                  updateField(
+                    "techStackText",
+                    limitText(event.target.value, recruitPostFieldLimits.techStackText),
+                  )
+                }
                 className="field"
                 placeholder="예: Next.js, Node.js"
+                maxLength={recruitPostFieldLimits.techStackText}
+              />
+              <CharacterCount
+                value={draft.techStackText}
+                maxLength={recruitPostFieldLimits.techStackText}
               />
             </label>
           </div>
@@ -524,9 +606,19 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
               진행 단계
               <input
                 value={draft.stage}
-                onChange={(event) => updateField("stage", event.target.value)}
+                onChange={(event) =>
+                  updateField(
+                    "stage",
+                    limitText(event.target.value, recruitPostFieldLimits.stage),
+                  )
+                }
                 className="field"
                 placeholder="예: 아이디어 검증"
+                maxLength={recruitPostFieldLimits.stage}
+              />
+              <CharacterCount
+                value={draft.stage}
+                maxLength={recruitPostFieldLimits.stage}
               />
             </label>
             <label className="space-y-2 text-sm font-semibold text-slate-800">
@@ -545,18 +637,38 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
               팀장 이름
               <input
                 value={draft.ownerName}
-                onChange={(event) => updateField("ownerName", event.target.value)}
+                onChange={(event) =>
+                  updateField(
+                    "ownerName",
+                    limitText(event.target.value, recruitPostFieldLimits.ownerName),
+                  )
+                }
                 className="field"
                 placeholder="예: 홍길동"
+                maxLength={recruitPostFieldLimits.ownerName}
+              />
+              <CharacterCount
+                value={draft.ownerName}
+                maxLength={recruitPostFieldLimits.ownerName}
               />
             </label>
             <label className="space-y-2 text-sm font-semibold text-slate-800">
               팀장 역할
               <input
                 value={draft.ownerRole}
-                onChange={(event) => updateField("ownerRole", event.target.value)}
+                onChange={(event) =>
+                  updateField(
+                    "ownerRole",
+                    limitText(event.target.value, recruitPostFieldLimits.ownerRole),
+                  )
+                }
                 className="field"
                 placeholder="예: PM / Frontend"
+                maxLength={recruitPostFieldLimits.ownerRole}
+              />
+              <CharacterCount
+                value={draft.ownerRole}
+                maxLength={recruitPostFieldLimits.ownerRole}
               />
             </label>
           </div>
@@ -566,29 +678,59 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
               진행 방식
               <input
                 value={draft.meetingStyle}
-                onChange={(event) => updateField("meetingStyle", event.target.value)}
+                onChange={(event) =>
+                  updateField(
+                    "meetingStyle",
+                    limitText(event.target.value, recruitPostFieldLimits.meetingStyle),
+                  )
+                }
                 className="field"
                 placeholder="예: 온·오프라인 혼합"
+                maxLength={recruitPostFieldLimits.meetingStyle}
+              />
+              <CharacterCount
+                value={draft.meetingStyle}
+                maxLength={recruitPostFieldLimits.meetingStyle}
               />
             </label>
             <label className="space-y-2 text-sm font-semibold text-slate-800">
               활동 일정
-              <input
+              <textarea
                 value={draft.schedule}
-                onChange={(event) => updateField("schedule", event.target.value)}
-                className="field"
+                onChange={(event) =>
+                  updateField(
+                    "schedule",
+                    limitText(event.target.value, recruitPostFieldLimits.schedule),
+                  )
+                }
+                className="field textarea min-h-[110px]"
                 placeholder="예: 주 2회 저녁 8시"
+                maxLength={recruitPostFieldLimits.schedule}
+              />
+              <CharacterCount
+                value={draft.schedule}
+                maxLength={recruitPostFieldLimits.schedule}
               />
             </label>
           </div>
 
           <label className="space-y-2 text-sm font-semibold text-slate-800">
             이번 팀의 목표
-            <input
+            <textarea
               value={draft.goal}
-              onChange={(event) => updateField("goal", event.target.value)}
-              className="field"
+              onChange={(event) =>
+                updateField(
+                  "goal",
+                  limitText(event.target.value, recruitPostFieldLimits.goal),
+                )
+              }
+              className="field textarea min-h-[110px]"
               placeholder="예: 3주 안에 배포 가능한 서비스 MVP 완성"
+              maxLength={recruitPostFieldLimits.goal}
+            />
+            <CharacterCount
+              value={draft.goal}
+              maxLength={recruitPostFieldLimits.goal}
             />
           </label>
 
