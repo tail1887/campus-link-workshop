@@ -1,4 +1,9 @@
+import {
+  getVerificationBadgeLabel,
+  getVerificationStatusLabel,
+} from "@/lib/verification-ui";
 import type { AuthContext, Role } from "@/types/identity";
+import type { Verification } from "@/types/profile";
 
 export type ProfileShellRole = Role;
 
@@ -10,6 +15,12 @@ export type ProfileShellViewModel = {
   badge: string;
   ctaHref: string;
   ctaLabel: string;
+  verificationSummary: {
+    label: string;
+    state: string;
+    status: Verification["status"];
+    href: string;
+  } | null;
   summaryCards: Array<{ label: string; value: string }>;
   checklist: string[];
   modules: Array<{ title: string; description: string; state: string; href?: string }>;
@@ -22,6 +33,7 @@ export type ProfileEntryViewModel = {
   subtitle: string;
   recommendedHref: string;
   recommendedLabel: string;
+  eyebrow: string;
   summaryCards: Array<{ label: string; value: string }>;
   cards: Array<{
     href: string;
@@ -44,8 +56,9 @@ function getRoleLabel(role: ProfileShellRole) {
 export function buildProfileShellViewModel(input: {
   authContext: AuthContext;
   role: ProfileShellRole;
+  verification?: Verification | null;
 }): ProfileShellViewModel {
-  const { authContext, role } = input;
+  const { authContext, role, verification = null } = input;
 
   if (!authContext.authenticated) {
     return {
@@ -60,6 +73,7 @@ export function buildProfileShellViewModel(input: {
       badge: "Guest Preview",
       ctaHref: "/entry",
       ctaLabel: "역할별 진입 구조 보기",
+      verificationSummary: null,
       summaryCards: [
         { label: "현재 상태", value: "게스트" },
         { label: "대상 셸", value: role === "admin" ? "관리자" : "사용자" },
@@ -88,11 +102,25 @@ export function buildProfileShellViewModel(input: {
         ...(role === "student"
           ? [
               {
+                title: "Resume Workspace",
+                description:
+                  "기본 이력서 편집, completeness 확인, profile-linked helper가 연결될 Phase 2 C 진입점",
+                state: "phase-2-track",
+                href: "/resume",
+              },
+              {
                 title: "Communication Center",
                 description:
                   "문의하기, 알림 설정, 사용자 커뮤니케이션 로그가 연결될 Phase 2 D 슬롯",
                 state: "phase-2-track",
                 href: "/profile/communication",
+              },
+              {
+                title: "Verification Center",
+                description:
+                  "추가 인증 제출, 상태 확인, badge preview가 연결될 Phase 2 B 슬롯",
+                state: "phase-2-track",
+                href: "/verification",
               },
             ]
           : []),
@@ -107,6 +135,15 @@ export function buildProfileShellViewModel(input: {
   const actualRole = authContext.user.role;
   const isAdminShell = role === "admin";
   const roleMismatch = actualRole !== role;
+  const verificationSummary =
+    verification && actualRole === "student"
+      ? {
+          label: getVerificationBadgeLabel(verification.badge),
+          state: getVerificationStatusLabel(verification.status),
+          status: verification.status,
+          href: "/verification",
+        }
+      : null;
 
   return {
     role,
@@ -122,10 +159,17 @@ export function buildProfileShellViewModel(input: {
       : isAdminShell
         ? "관리자 셸 열기"
         : "내 프로필 셸 열기",
+    verificationSummary,
     summaryCards: [
       { label: "로그인 이메일", value: authContext.user.email },
       { label: "표시 이름", value: authContext.user.displayName },
-      { label: "현재 역할", value: getRoleLabel(actualRole) },
+      {
+        label: actualRole === "student" ? "인증 상태" : "현재 역할",
+        value:
+          actualRole === "student" && verification
+            ? getVerificationStatusLabel(verification.status)
+            : getRoleLabel(actualRole),
+      },
     ],
     checklist: isAdminShell
       ? [
@@ -163,6 +207,20 @@ export function buildProfileShellViewModel(input: {
             state: "future-bridge",
           },
           {
+            title: "Resume Workspace",
+            description:
+              "기본 이력서 편집, completeness, profile-linked helper를 다루는 Phase 2 C 워크스페이스",
+            state: "phase-2-track",
+            href: "/resume",
+          },
+          {
+            title: "Verification Center",
+            description:
+              "추가 인증 제출, 현재 검토 상태, badge display state를 보여주는 Phase 2 B 화면",
+            state: verification ? getVerificationStatusLabel(verification.status) : "ready",
+            href: "/verification",
+          },
+          {
             title: "Communication Center",
             description:
               "문의 제출 흐름, 최근 메시지 로그, 사용자 알림 설정을 연결하는 Phase 2 D 진입 모듈",
@@ -183,6 +241,7 @@ export function buildProfileShellViewModel(input: {
 
 export function buildProfileEntryViewModel(
   authContext: AuthContext,
+  verification?: Verification | null,
 ): ProfileEntryViewModel {
   const recommendedRole = authContext.authenticated ? authContext.user.role : null;
 
@@ -196,6 +255,10 @@ export function buildProfileEntryViewModel(
     recommendedLabel: recommendedRole
       ? `${recommendedRole === "admin" ? "관리자" : "사용자"} 기본 셸 열기`
       : "사용자 셸 미리보기 열기",
+    eyebrow:
+      recommendedRole === "student" && verification
+        ? getVerificationBadgeLabel(verification.badge)
+        : "Phase 2 B Track",
     summaryCards: [
       {
         label: "Session",
@@ -206,8 +269,13 @@ export function buildProfileEntryViewModel(
         value: authContext.authenticated ? authContext.user.email : "없음",
       },
       {
-        label: "Recommended Role",
-        value: recommendedRole ? getRoleLabel(recommendedRole) : "student preview",
+        label: recommendedRole === "student" ? "Verification" : "Recommended Role",
+        value:
+          recommendedRole === "student" && verification
+            ? getVerificationStatusLabel(verification.status)
+            : recommendedRole
+              ? getRoleLabel(recommendedRole)
+              : "student preview",
       },
     ],
     cards: [
@@ -218,6 +286,17 @@ export function buildProfileEntryViewModel(
         description:
           "자기소개, 관심 키워드, 추가 인증, 이력서 모듈이 연결될 사용자용 기본 셸입니다.",
         state: recommendedRole === "student" ? "recommended" : "preview",
+      },
+      {
+        href: "/verification",
+        eyebrow: "Verification",
+        title: "추가 인증 상태와 배지",
+        description:
+          "인증 요청 제출, 현재 상태 확인, 프로필 배지 표시 상태를 확인하는 Phase 2 B 진입점입니다.",
+        state:
+          recommendedRole === "student" && verification
+            ? getVerificationStatusLabel(verification.status)
+            : "preview",
       },
       {
         href: "/admin/profile",
@@ -231,6 +310,7 @@ export function buildProfileEntryViewModel(
     notes: [
       "role-based entry 판정은 현재 세션의 shared AuthContext를 그대로 사용합니다.",
       "세부 profile shape는 이 브랜치에서 고정하지 않고 셸 내부 슬롯만 확보합니다.",
+      "Verification 진입은 같은 shared contract를 사용하므로 profile과 admin 후속 브랜치가 별도 badge enum을 만들 필요가 없습니다.",
       "후속 브랜치는 이 entry에서 추천 경로와 각 셸의 placeholder 영역을 교체하면 됩니다.",
     ],
   };
