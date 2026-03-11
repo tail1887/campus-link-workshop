@@ -1,26 +1,52 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  buildBranchLocalAnalysis,
-  buildBranchLocalConnection,
+  buildGithubAnalysisSnapshot,
+  getConnectedProfileUrl,
 } from "@/lib/github-analysis/adapter";
+import type { GithubAnalysisViewModel } from "@/lib/github-analysis/types";
 import {
-  clearGithubAnalysisStorage,
-  readGithubAnalysisStorage,
-  writeGithubAnalysisStorage,
-} from "@/lib/github-analysis/storage";
+  isGitHubProfileUrl,
+  isValidGitHubUsername,
+  normalizeGitHubUsername,
+} from "@/lib/ai-platform";
+import type { ApiError, ApiSuccess } from "@/types/identity";
 import type {
-  GithubAnalysisViewModel,
-  GithubConnectionDraft,
-  GithubConnectionRecord,
-} from "@/lib/github-analysis/types";
-import { isValidHttpUrl } from "@/lib/profile";
+  GitHubAnalysisJob,
+  GitHubAnalysisJobPayload,
+  GitHubConnection,
+  GitHubConnectionPayload,
+} from "@/types/ai";
 
 type GithubAnalysisWorkspaceProps = {
   model: GithubAnalysisViewModel;
 };
+
+function wait(ms: number) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+async function readApiResult<T>(response: Response) {
+  return (await response.json().catch(() => null)) as
+    | ApiSuccess<T>
+    | ApiError
+    | null;
+}
+
+function getApiErrorMessage(
+  result: ApiSuccess<unknown> | ApiError | null,
+  fallback: string,
+) {
+  if (result && !result.success) {
+    return result.error.message;
+  }
+
+  return fallback;
+}
 
 function formatTimestamp(value: string | null) {
   if (!value) {
@@ -35,78 +61,254 @@ function formatTimestamp(value: string | null) {
   }).format(new Date(value));
 }
 
-function getConnectionTone(status: GithubConnectionRecord["status"] | "guest") {
+function getConnectionTone(status: GitHubConnection["status"] | "saving" | "guest") {
   if (status === "connected") {
     return "bg-[color:var(--teal-soft)] text-[color:var(--teal)]";
   }
-
-  if (status === "syncing") {
+  if (status === "saving") {
     return "bg-amber-100 text-amber-700";
   }
-
-  if (status === "attention") {
+  if (status === "error") {
     return "bg-rose-100 text-rose-700";
   }
-
   return "bg-slate-200 text-slate-700";
 }
 
-function getAnalysisTone(state: string) {
-  if (state === "ready") {
+function getConnectionLabel(status: GitHubConnection["status"] | "saving" | "guest") {
+  if (status === "saving") {
+    return "saving";
+  }
+  if (status === "guest") {
+    return "guest";
+  }
+  return status;
+}
+
+function getAnalysisTone(status: GitHubAnalysisJob["status"] | "idle") {
+  if (status === "succeeded") {
     return "bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]";
   }
-
-  if (state === "refreshing") {
+  if (status === "queued" || status === "running") {
     return "bg-amber-100 text-amber-700";
   }
-
-  if (state === "failed") {
+  if (status === "failed") {
     return "bg-rose-100 text-rose-700";
   }
-
   return "bg-slate-200 text-slate-700";
+}
+
+function getAnalysisLabel(status: GitHubAnalysisJob["status"] | "idle") {
+  if (status === "queued") {
+    return "요청 접수";
+  }
+  if (status === "running") {
+    return "분석 중";
+  }
+  if (status === "succeeded") {
+    return "분석 완료";
+  }
+  if (status === "failed") {
+    return "재시도 필요";
+  }
+  return "idle";
+}
+
+function canAnalyze(connection: GitHubConnection | null) {
+  return connection?.status === "connected" && Boolean(connection.username);
 }
 
 export function GithubAnalysisWorkspace({
   model,
 }: GithubAnalysisWorkspaceProps) {
-  const [draft, setDraft] = useState<GithubConnectionDraft>(model.initialDraft);
-  const [connection, setConnection] = useState(model.initialConnection);
-  const [analysis, setAnalysis] = useState(model.initialAnalysis);
+  const [draft, setDraft] = useState(model.initialDraft);
+  const [connection, setConnection] = useState<GitHubConnection | null>(
+    model.initialConnection,
+  );
+  const [analysisJob, setAnalysisJob] = useState<GitHubAnalysisJob | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [isPending, startTransition] = useTransition();
+  const [isConnectionPending, setIsConnectionPending] = useState(false);
+  const [isAnalysisPending, setIsAnalysisPending] = useState(false);
+  const runIdRef = useRef(0);
+  const initialLoadRef = useRef(false);
 
   useEffect(() => {
-    if (!model.profileContext) {
+    return () => {
+      runIdRef.current += 1;
+    };
+  }, []);
+
+  const analysis = buildGithubAnalysisSnapshot({
+    job: analysisJob,
+    context: model.profileContext,
+  });
+  const connectionStatus =
+    model.status === "guest"
+      ? "guest"
+      : isConnectionPending
+        ? "saving"
+        : connection?.status ?? "not_connected";
+  const analysisStatus = analysisJob?.status ?? (isAnalysisPending ? "running" : "idle");
+  const summaryCards =
+    model.status === "guest"
+      ? model.summaryCards
+      : [
+          {
+            label: "GitHub 연결",
+            value:
+              connection?.status === "connected" && connection.username
+                ? `@${connection.username}`
+                : "연결 필요",
+          },
+          {
+            label: "최근 분석",
+            value: analysisJob?.status
+              ? getAnalysisLabel(analysisJob.status)
+              : connection?.lastAnalysisJobId
+                ? "기존 실행 감지"
+                : "분석 전",
+          },
+          {
+            label: "Provider",
+            value: model.providers?.githubConnection.label ?? "Mock GitHub Connector",
+          },
+          {
+            label: "Data Source",
+            value: model.dataSourceLabel,
+          },
+        ];
+
+  const pollAnalysisJob = async (
+    jobId: string,
+    options?: {
+      initialJob?: GitHubAnalysisJob | null;
+      successMessage?: string | null;
+    },
+  ) => {
+    const runId = runIdRef.current + 1;
+    runIdRef.current = runId;
+    setIsAnalysisPending(true);
+
+    try {
+      let nextJob = options?.initialJob ?? null;
+
+      if (nextJob) {
+        setAnalysisJob(nextJob);
+      }
+
+      while (runId === runIdRef.current) {
+        if (nextJob && nextJob.status !== "queued" && nextJob.status !== "running") {
+          break;
+        }
+
+        if (nextJob) {
+          await wait(900);
+        }
+
+        const response = await fetch(`/api/github/analysis/jobs/${jobId}`, {
+          cache: "no-store",
+        });
+        const result = await readApiResult<GitHubAnalysisJobPayload>(response);
+
+        if (!response.ok || !result?.success) {
+          throw new Error(
+            getApiErrorMessage(result, "GitHub 분석 상태를 불러오지 못했습니다."),
+          );
+        }
+
+        nextJob = result.data.job;
+        setAnalysisJob(nextJob);
+
+        if (nextJob.status !== "queued" && nextJob.status !== "running") {
+          break;
+        }
+      }
+
+      if (runId !== runIdRef.current || !nextJob) {
+        return false;
+      }
+
+      if (nextJob.status === "failed") {
+        setError(nextJob.error?.message ?? "GitHub 분석 생성에 실패했습니다.");
+        return false;
+      }
+
+      if (options?.successMessage) {
+        setSuccess(options.successMessage);
+      }
+
+      return true;
+    } catch (requestError) {
+      if (runId === runIdRef.current) {
+        setError(
+          requestError instanceof Error
+            ? requestError.message
+            : "GitHub 분석을 불러오지 못했습니다.",
+        );
+      }
+      return false;
+    } finally {
+      if (runId === runIdRef.current) {
+        setIsAnalysisPending(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (model.status !== "ready" || initialLoadRef.current) {
       return;
     }
 
-    const stored = readGithubAnalysisStorage(model.profileContext.user.id);
-    if (!stored) {
+    initialLoadRef.current = true;
+
+    if (!model.initialAnalysisJobId) {
       return;
     }
 
-    const frameId = window.requestAnimationFrame(() => {
-      setConnection(stored.connection);
-      setAnalysis(stored.analysis);
+    void pollAnalysisJob(model.initialAnalysisJobId);
+  }, [model.initialAnalysisJobId, model.status]);
+
+  const startAnalysis = async (successMessage: string) => {
+    if (!canAnalyze(connection)) {
+      setError("분석을 시작하기 전에 GitHub 계정을 먼저 연결해주세요.");
+      return false;
+    }
+
+    setError("");
+
+    const response = await fetch("/api/github/analysis/jobs", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(model.defaultAnalysisRequest),
     });
+    const result = await readApiResult<GitHubAnalysisJobPayload>(response);
 
-    return () => window.cancelAnimationFrame(frameId);
-  }, [model.profileContext]);
-
-  const persist = (nextConnection: GithubConnectionRecord | null, nextAnalysis: typeof analysis) => {
-    if (!model.profileContext) {
-      return;
+    if (!response.ok || !result?.success) {
+      setError(
+        getApiErrorMessage(result, "GitHub 분석 요청을 시작하지 못했습니다."),
+      );
+      return false;
     }
 
-    writeGithubAnalysisStorage(model.profileContext.user.id, {
-      connection: nextConnection,
-      analysis: nextAnalysis,
+    setAnalysisJob(result.data.job);
+    setConnection((current) =>
+      current
+        ? {
+            ...current,
+            lastAnalysisJobId: result.data.job.id,
+          }
+        : current,
+    );
+
+    return pollAnalysisJob(result.data.job.id, {
+      initialJob: result.data.job,
+      successMessage,
     });
   };
 
-  const handleConnect = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleConnect = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
     setSuccess("");
@@ -116,95 +318,108 @@ export function GithubAnalysisWorkspace({
       return;
     }
 
-    const profileContext = model.profileContext;
+    const usernameInput = draft.username.trim() || draft.profileUrl.trim();
+    const profileUrl = draft.profileUrl.trim();
 
-    if (!draft.username.trim() && !draft.profileUrl.trim()) {
+    if (!usernameInput) {
       setError("GitHub username 또는 profile URL을 입력해주세요.");
       return;
     }
 
-    if (draft.profileUrl.trim() && !isValidHttpUrl(draft.profileUrl.trim())) {
-      setError("GitHub profile URL은 http 또는 https 형식이어야 합니다.");
+    if (!isValidGitHubUsername(usernameInput)) {
+      setError("올바른 GitHub username 또는 profile URL을 입력해주세요.");
       return;
     }
 
-    startTransition(async () => {
-      const pendingConnection = connection
-        ? { ...connection, status: "syncing" as const }
-        : null;
+    if (profileUrl && !isGitHubProfileUrl(profileUrl)) {
+      setError("GitHub profile URL은 https://github.com/... 형식이어야 합니다.");
+      return;
+    }
 
-      if (pendingConnection) {
-        setConnection(pendingConnection);
+    if (
+      profileUrl &&
+      normalizeGitHubUsername(profileUrl) !== normalizeGitHubUsername(usernameInput)
+    ) {
+      setError("username과 profile URL이 서로 다른 계정을 가리키고 있습니다.");
+      return;
+    }
+
+    setIsConnectionPending(true);
+
+    try {
+      const response = await fetch("/api/github/connection", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: usernameInput,
+          ...(profileUrl ? { profileUrl } : {}),
+        }),
+      });
+      const result = await readApiResult<GitHubConnectionPayload>(response);
+
+      if (!response.ok || !result?.success) {
+        setError(
+          getApiErrorMessage(result, "GitHub 연결 정보를 저장하지 못했습니다."),
+        );
+        return;
       }
 
-      await Promise.resolve();
-
-      const nextConnection = buildBranchLocalConnection({
-        draft,
-        existingConnectedAt: connection?.connectedAt ?? null,
+      setConnection(result.data.connection);
+      setDraft({
+        username: result.data.connection.username ?? "",
+        profileUrl: result.data.connection.profileUrl ?? "",
       });
-      const nextAnalysis = buildBranchLocalAnalysis({
-        connection: nextConnection,
-        context: profileContext,
-      });
+      setSuccess("GitHub 연결을 저장했습니다. 이어서 분석을 시작합니다.");
 
-      setConnection(nextConnection);
-      setAnalysis(nextAnalysis);
-      persist(nextConnection, nextAnalysis);
-      setSuccess("GitHub 연결 상태와 branch-local 분석 결과를 갱신했습니다.");
-    });
+      const analyzed = await startAnalysis("GitHub 분석 결과를 업데이트했습니다.");
+
+      if (!analyzed) {
+        setSuccess("GitHub 연결은 저장되었습니다.");
+      }
+    } finally {
+      setIsConnectionPending(false);
+    }
   };
 
-  const handleRefresh = () => {
-    if (!model.profileContext || !connection) {
-      return;
-    }
-
-    const profileContext = model.profileContext;
-
+  const handleRefresh = async () => {
     setError("");
     setSuccess("");
 
-    startTransition(async () => {
-      setConnection({ ...connection, status: "syncing" });
-      setAnalysis((current) =>
-        current
-          ? {
-              ...current,
-              state: "refreshing",
-            }
-          : current,
-      );
-
-      await Promise.resolve();
-
-      const nextConnection = {
-        ...connection,
-        status: "connected" as const,
-        lastSyncedAt: new Date().toISOString(),
-      };
-      const nextAnalysis = buildBranchLocalAnalysis({
-        connection: nextConnection,
-        context: profileContext,
-      });
-
-      setConnection(nextConnection);
-      setAnalysis(nextAnalysis);
-      persist(nextConnection, nextAnalysis);
-      setSuccess("분석 결과를 다시 생성했습니다.");
-    });
-  };
-
-  const handleDisconnect = () => {
-    if (!model.profileContext) {
+    if (!canAnalyze(connection)) {
+      setError("먼저 GitHub 계정을 연결한 뒤 분석을 실행해주세요.");
       return;
     }
 
-    setConnection(null);
-    setAnalysis(null);
-    clearGithubAnalysisStorage(model.profileContext.user.id);
-    setSuccess("Branch-local GitHub 연결을 해제했습니다.");
+    await startAnalysis("GitHub 분석 결과를 다시 생성했습니다.");
+  };
+
+  const handleDisconnect = async () => {
     setError("");
+    setSuccess("");
+    setIsConnectionPending(true);
+
+    try {
+      const response = await fetch("/api/github/connection", {
+        method: "DELETE",
+      });
+      const result = await readApiResult<GitHubConnectionPayload>(response);
+
+      if (!response.ok || !result?.success) {
+        setError(
+          getApiErrorMessage(result, "GitHub 연결을 해제하지 못했습니다."),
+        );
+        return;
+      }
+
+      runIdRef.current += 1;
+      setConnection(result.data.connection);
+      setAnalysisJob(null);
+      setSuccess("GitHub 연결을 해제했습니다.");
+    } finally {
+      setIsConnectionPending(false);
+    }
   };
 
   return (
@@ -217,14 +432,13 @@ export function GithubAnalysisWorkspace({
             <p className="section-subtitle">{model.subtitle}</p>
           </div>
           <div className="rounded-[1.5rem] border border-white/70 bg-white/82 px-5 py-4 text-sm leading-7 text-[color:var(--muted)]">
-            현재 결과는 `feature/p3-ai-platform-contracts` 이전 단계의 branch-local
-            adapter 산출물이며, shared provider payload 대신 재사용 가능한 UI 슬롯만
-            먼저 고정합니다.
+            shared Phase 3 contract를 기준으로 GitHub 연결과 latest analysis
+            job을 같은 경계에서 읽고 갱신합니다.
           </div>
         </div>
 
-        <div className="mt-8 grid gap-4 md:grid-cols-3">
-          {model.summaryCards.map((item) => (
+        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {summaryCards.map((item) => (
             <div
               key={item.label}
               className="rounded-[1.5rem] border border-white/65 bg-white/78 p-4"
@@ -253,20 +467,23 @@ export function GithubAnalysisWorkspace({
                 </h2>
               </div>
               <span
-                className={`rounded-full px-3 py-1 text-xs font-semibold ${getConnectionTone(connection?.status ?? "guest")}`}
+                className={`rounded-full px-3 py-1 text-xs font-semibold ${getConnectionTone(connectionStatus)}`}
               >
-                {connection?.status ?? "not_connected"}
+                {getConnectionLabel(connectionStatus)}
               </span>
             </div>
 
             {model.status === "guest" ? (
               <div className="mt-5 rounded-[1.4rem] border border-slate-200/75 bg-white/82 p-4">
                 <p className="text-sm leading-7 text-[color:var(--muted)]">
-                  로그인 후 GitHub username 또는 profile URL을 등록하고, branch-local
-                  분석 결과 UI를 확인할 수 있습니다.
+                  로그인 후 GitHub username 또는 profile URL을 등록하고, shared
+                  analysis job 결과를 polling으로 확인할 수 있습니다.
                 </p>
                 <div className="mt-4 flex flex-wrap gap-3">
-                  <Link href="/login?next=%2Fgithub-analysis" className="button-primary px-4 py-3 text-sm">
+                  <Link
+                    href="/login?next=%2Fgithub-analysis"
+                    className="button-primary px-4 py-3 text-sm"
+                  >
                     로그인하고 연결하기
                   </Link>
                   <Link href="/profile" className="button-ghost px-4 py-3 text-sm">
@@ -276,9 +493,9 @@ export function GithubAnalysisWorkspace({
               </div>
             ) : (
               <>
-                <form className="mt-5 space-y-4" onSubmit={handleConnect}>
+                <form className="mt-5 space-y-4" onSubmit={(event) => void handleConnect(event)}>
                   <label className="space-y-2 text-sm font-semibold text-slate-800">
-                    GitHub username
+                    GitHub username 또는 profile URL
                     <input
                       value={draft.username}
                       onChange={(event) =>
@@ -288,12 +505,12 @@ export function GithubAnalysisWorkspace({
                         }))
                       }
                       className="field"
-                      placeholder="campus-link-demo"
-                      disabled={isPending}
+                      placeholder="@campus-link-demo 또는 https://github.com/campus-link-demo"
+                      disabled={isConnectionPending || isAnalysisPending}
                     />
                   </label>
                   <label className="space-y-2 text-sm font-semibold text-slate-800">
-                    GitHub profile URL
+                    GitHub profile URL (optional)
                     <input
                       value={draft.profileUrl}
                       onChange={(event) =>
@@ -304,7 +521,7 @@ export function GithubAnalysisWorkspace({
                       }
                       className="field"
                       placeholder="https://github.com/campus-link-demo"
-                      disabled={isPending}
+                      disabled={isConnectionPending || isAnalysisPending}
                     />
                   </label>
 
@@ -321,22 +538,26 @@ export function GithubAnalysisWorkspace({
                   ) : null}
 
                   <div className="flex flex-wrap gap-3">
-                    <button type="submit" className="button-primary px-4 py-3 text-sm" disabled={isPending}>
-                      {connection ? "연결 정보 갱신" : "GitHub 등록"}
+                    <button
+                      type="submit"
+                      className="button-primary px-4 py-3 text-sm"
+                      disabled={isConnectionPending || isAnalysisPending}
+                    >
+                      {connection?.status === "connected" ? "연결 정보 갱신" : "GitHub 등록"}
                     </button>
                     <button
                       type="button"
                       className="button-secondary px-4 py-3 text-sm"
-                      onClick={handleRefresh}
-                      disabled={isPending || !connection}
+                      onClick={() => void handleRefresh()}
+                      disabled={!canAnalyze(connection) || isConnectionPending || isAnalysisPending}
                     >
                       분석 다시 생성
                     </button>
                     <button
                       type="button"
                       className="button-ghost px-4 py-3 text-sm"
-                      onClick={handleDisconnect}
-                      disabled={isPending || !connection}
+                      onClick={() => void handleDisconnect()}
+                      disabled={isConnectionPending || isAnalysisPending}
                     >
                       연결 해제
                     </button>
@@ -346,10 +567,10 @@ export function GithubAnalysisWorkspace({
                 <div className="mt-6 grid gap-3 md:grid-cols-2">
                   <div className="rounded-[1.3rem] border border-slate-200/75 bg-white/82 px-4 py-4">
                     <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
-                      Data Source
+                      Provider
                     </p>
                     <p className="mt-2 text-lg font-semibold text-slate-950">
-                      {model.dataSourceLabel}
+                      {model.providers?.githubConnection.label ?? "Mock GitHub Connector"}
                     </p>
                   </div>
                   <div className="rounded-[1.3rem] border border-slate-200/75 bg-white/82 px-4 py-4">
@@ -357,10 +578,21 @@ export function GithubAnalysisWorkspace({
                       Last Sync
                     </p>
                     <p className="mt-2 text-lg font-semibold text-slate-950">
-                      {formatTimestamp(connection?.lastSyncedAt ?? null)}
+                      {formatTimestamp(connection?.lastValidatedAt ?? null)}
                     </p>
                   </div>
                 </div>
+
+                {getConnectedProfileUrl(connection) ? (
+                  <a
+                    href={getConnectedProfileUrl(connection) ?? "#"}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-4 inline-flex rounded-full border border-slate-200/80 bg-white/84 px-4 py-3 text-sm font-semibold text-slate-700"
+                  >
+                    연결된 GitHub 프로필 열기
+                  </a>
+                ) : null}
               </>
             )}
           </div>
@@ -394,51 +626,107 @@ export function GithubAnalysisWorkspace({
                 </h2>
               </div>
               <span
-                className={`rounded-full px-3 py-1 text-xs font-semibold ${getAnalysisTone(analysis?.state ?? "idle")}`}
+                className={`rounded-full px-3 py-1 text-xs font-semibold ${getAnalysisTone(analysisStatus)}`}
               >
-                {analysis?.state ?? "idle"}
+                {getAnalysisLabel(analysisStatus)}
               </span>
             </div>
 
-            {!analysis ? (
+            {!analysis && !analysisJob ? (
               <div className="mt-5 rounded-[1.4rem] border border-dashed border-slate-300 bg-white/72 p-5 text-sm leading-7 text-[color:var(--muted)]">
-                GitHub 연결을 등록하면 coverage, standout stack, focus area, project insight
-                카드가 이 영역에 채워집니다.
+                GitHub 연결을 저장한 뒤 분석을 시작하면 summary, top languages,
+                recommended roles, repository insight 카드가 이 영역에 채워집니다.
               </div>
-            ) : (
+            ) : null}
+
+            {analysisJob?.status === "queued" || analysisJob?.status === "running" ? (
+              <div className="mt-5 rounded-[1.2rem] border border-slate-200/80 bg-white/82 px-4 py-4">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-slate-950">
+                    {getAnalysisLabel(analysisJob.status)}
+                  </p>
+                  <p className="text-xs font-medium uppercase tracking-[0.12em] text-[color:var(--muted)]">
+                    provider {analysisJob.provider}
+                  </p>
+                </div>
+                <p className="mt-2 text-sm leading-7 text-[color:var(--muted)]">
+                  첫 polling에서는 queued/running 상태가 보일 수 있고, 이후 응답에서
+                  succeeded 또는 failed 상태로 전이됩니다.
+                </p>
+                <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200/80">
+                  <div className="h-full w-2/3 animate-pulse rounded-full bg-[linear-gradient(135deg,var(--accent),var(--teal))]" />
+                </div>
+              </div>
+            ) : null}
+
+            {analysisJob?.status === "failed" ? (
+              <div className="mt-5 rounded-[1.2rem] border border-rose-200 bg-rose-50 px-4 py-4 text-sm leading-7 text-rose-700">
+                {analysisJob.error?.message ?? "GitHub 분석에 실패했습니다."}
+              </div>
+            ) : null}
+
+            {analysis ? (
               <>
                 <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                  <div className="rounded-[1.3rem] border border-slate-200/75 bg-white/82 px-4 py-4">
+                  {[
+                    ["Coverage", analysis.coverageLabel],
+                    ["Standout Stack", analysis.standoutStack],
+                    ["Collaboration Fit", analysis.collaborationFit],
+                    ["Generated", formatTimestamp(analysis.generatedAt)],
+                  ].map(([label, value]) => (
+                    <div
+                      key={label}
+                      className="rounded-[1.3rem] border border-slate-200/75 bg-white/82 px-4 py-4"
+                    >
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                        {label}
+                      </p>
+                      <p className="mt-2 text-lg font-semibold text-slate-950">
+                        {value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-5 rounded-[1.4rem] border border-slate-200/75 bg-white/82 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
                     <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
-                      Coverage
+                      Analysis Summary
                     </p>
-                    <p className="mt-2 text-lg font-semibold text-slate-950">
-                      {analysis.coverageLabel}
-                    </p>
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                      {analysis.confidenceLabel}
+                    </span>
                   </div>
-                  <div className="rounded-[1.3rem] border border-slate-200/75 bg-white/82 px-4 py-4">
+                  <p className="mt-3 text-sm leading-7 text-[color:var(--muted)]">
+                    {analysis.summary}
+                  </p>
+                </div>
+
+                <div className="mt-5 grid gap-4 lg:grid-cols-2">
+                  <div className="rounded-[1.4rem] border border-slate-200/75 bg-white/82 p-4">
                     <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
-                      Standout Stack
+                      Strengths
                     </p>
-                    <p className="mt-2 text-lg font-semibold text-slate-950">
-                      {analysis.standoutStack}
-                    </p>
+                    <ul className="mt-3 space-y-2 text-sm leading-7 text-[color:var(--muted)]">
+                      {analysis.strengths.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
                   </div>
-                  <div className="rounded-[1.3rem] border border-slate-200/75 bg-white/82 px-4 py-4">
+                  <div className="rounded-[1.4rem] border border-slate-200/75 bg-white/82 p-4">
                     <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
-                      Collaboration Fit
+                      Recommended Roles
                     </p>
-                    <p className="mt-2 text-lg font-semibold text-slate-950">
-                      {analysis.collaborationFit}
-                    </p>
-                  </div>
-                  <div className="rounded-[1.3rem] border border-slate-200/75 bg-white/82 px-4 py-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
-                      Generated
-                    </p>
-                    <p className="mt-2 text-lg font-semibold text-slate-950">
-                      {formatTimestamp(analysis.generatedAt)}
-                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {analysis.recommendedRoles.map((item) => (
+                        <span
+                          key={item}
+                          className="rounded-full bg-[color:var(--teal-soft)] px-3 py-2 text-sm font-semibold text-[color:var(--teal)]"
+                        >
+                          {item}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
@@ -477,29 +765,35 @@ export function GithubAnalysisWorkspace({
                           </p>
                         </div>
                         <span
-                          className={`rounded-full px-3 py-1 text-xs font-semibold ${getAnalysisTone(project.health === "strong" ? "ready" : project.health === "promising" ? "refreshing" : "failed")}`}
+                          className={`rounded-full px-3 py-1 text-xs font-semibold ${getAnalysisTone(
+                            project.health === "strong"
+                              ? "succeeded"
+                              : project.health === "promising"
+                                ? "running"
+                                : "failed",
+                          )}`}
                         >
                           {project.health}
                         </span>
                       </div>
 
                       <div className="mt-4 grid gap-3 md:grid-cols-2">
-                        <div className="rounded-[1.2rem] bg-slate-50 px-4 py-3">
-                          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--muted)]">
-                            Role Fit
-                          </p>
-                          <p className="mt-2 text-sm font-semibold text-slate-900">
-                            {project.roleFit}
-                          </p>
-                        </div>
-                        <div className="rounded-[1.2rem] bg-slate-50 px-4 py-3">
-                          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--muted)]">
-                            Activity Signal
-                          </p>
-                          <p className="mt-2 text-sm font-semibold text-slate-900">
-                            {project.activity}
-                          </p>
-                        </div>
+                        {[
+                          { label: "Role Fit", value: project.roleFit },
+                          { label: "Activity Signal", value: project.activity },
+                        ].map((item) => (
+                          <div
+                            key={item.label}
+                            className="rounded-[1.2rem] bg-slate-50 px-4 py-3"
+                          >
+                            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--muted)]">
+                              {item.label}
+                            </p>
+                            <p className="mt-2 text-sm font-semibold text-slate-900">
+                              {item.value}
+                            </p>
+                          </div>
+                        ))}
                       </div>
 
                       <div className="mt-4 flex flex-wrap gap-2">
@@ -514,72 +808,53 @@ export function GithubAnalysisWorkspace({
                       </div>
 
                       <div className="mt-4 grid gap-3 md:grid-cols-2">
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--muted)]">
-                            Highlights
-                          </p>
-                          <ul className="mt-2 space-y-2 text-sm leading-7 text-[color:var(--muted)]">
-                            {project.highlights.map((item) => (
-                              <li key={item}>{item}</li>
-                            ))}
-                          </ul>
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--muted)]">
-                            Signals
-                          </p>
-                          <ul className="mt-2 space-y-2 text-sm leading-7 text-[color:var(--muted)]">
-                            {project.signals.map((item) => (
-                              <li key={item}>{item}</li>
-                            ))}
-                          </ul>
-                        </div>
+                        {[
+                          { label: "Highlights", items: project.highlights },
+                          { label: "Signals", items: project.signals },
+                        ].map((item) => (
+                          <div key={item.label}>
+                            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--muted)]">
+                              {item.label}
+                            </p>
+                            <ul className="mt-2 space-y-2 text-sm leading-7 text-[color:var(--muted)]">
+                              {item.items.map((entry) => (
+                                <li key={entry}>{entry}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
                       </div>
                     </a>
                   ))}
                 </div>
               </>
-            )}
+            ) : null}
           </div>
 
           <div className="grid gap-6 lg:grid-cols-2">
-            <div className="panel rounded-[1.8rem] p-5 sm:p-6">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-                Profile Reuse
-              </p>
-              <div className="mt-4 grid gap-3">
-                {model.integrationPoints.profile.map((item) => (
-                  <div
-                    key={item.id}
-                    className="rounded-[1.2rem] border border-slate-200/80 bg-white/82 px-4 py-3"
-                  >
-                    <p className="text-sm font-semibold text-slate-950">{item.title}</p>
-                    <p className="mt-2 text-sm leading-7 text-[color:var(--muted)]">
-                      {item.description}
-                    </p>
-                  </div>
-                ))}
+            {[
+              { heading: "Profile Reuse", items: model.integrationPoints.profile },
+              { heading: "Admin Reuse", items: model.integrationPoints.admin },
+            ].map((section) => (
+              <div key={section.heading} className="panel rounded-[1.8rem] p-5 sm:p-6">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
+                  {section.heading}
+                </p>
+                <div className="mt-4 grid gap-3">
+                  {section.items.map((item) => (
+                    <div
+                      key={item.id}
+                      className="rounded-[1.2rem] border border-slate-200/80 bg-white/82 px-4 py-3"
+                    >
+                      <p className="text-sm font-semibold text-slate-950">{item.title}</p>
+                      <p className="mt-2 text-sm leading-7 text-[color:var(--muted)]">
+                        {item.description}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-
-            <div className="panel rounded-[1.8rem] p-5 sm:p-6">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-                Admin Reuse
-              </p>
-              <div className="mt-4 grid gap-3">
-                {model.integrationPoints.admin.map((item) => (
-                  <div
-                    key={item.id}
-                    className="rounded-[1.2rem] border border-slate-200/80 bg-white/82 px-4 py-3"
-                  >
-                    <p className="text-sm font-semibold text-slate-950">{item.title}</p>
-                    <p className="mt-2 text-sm leading-7 text-[color:var(--muted)]">
-                      {item.description}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
