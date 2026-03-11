@@ -69,7 +69,7 @@ export async function SiteHeader() {
               </>
             ) : (
               <>
-                <Link href="/login" className="rounded-full border border-slate-200/80 bg-white/84 px-4 py-3 text-sm font-semibold text-slate-700">
+                <Link href="/login" className="button-ghost px-4 py-3 text-sm">
                   로그인
                 </Link>
                 <Link href="/signup" className="button-primary px-4 py-3 text-sm">

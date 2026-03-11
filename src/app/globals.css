@@ -133,6 +133,8 @@ a {
   align-items: center;
   justify-content: center;
   gap: 0.65rem;
+  flex-shrink: 0;
+  white-space: nowrap;
   border-radius: 999px;
   background: linear-gradient(135deg, var(--accent) 0%, #ff9367 100%);
   padding: 0.95rem 1.4rem;
@@ -151,6 +153,8 @@ a {
   align-items: center;
   justify-content: center;
   gap: 0.65rem;
+  flex-shrink: 0;
+  white-space: nowrap;
   border-radius: 999px;
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.72);
@@ -163,6 +167,33 @@ a {
   transform: translateY(-2px);
   border-color: rgba(16, 35, 58, 0.22);
   background: rgba(255, 255, 255, 0.88);
+}
+
+.button-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  flex-shrink: 0;
+  white-space: nowrap;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.84);
+  padding: 0.95rem 1.4rem;
+  font-weight: 700;
+  color: var(--foreground);
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.button-ghost:hover {
+  transform: translateY(-2px);
+  border-color: rgba(16, 35, 58, 0.22);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 16px 32px rgba(16, 35, 58, 0.12);
 }
 
 .field {
