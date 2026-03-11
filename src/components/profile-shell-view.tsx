@@ -1,5 +1,7 @@
 import Link from "next/link";
 import type { ProfileShellViewModel } from "@/lib/profile-shell/adapter";
+import { VerificationStatusBadge } from "@/components/verification-status-badge";
+import { getVerificationStatusTone } from "@/lib/verification-ui";
 
 type ProfileShellViewProps = {
   model: ProfileShellViewModel;
@@ -15,9 +17,27 @@ export function ProfileShellView({ model }: ProfileShellViewProps) {
             <h1 className="section-title text-slate-950">{model.title}</h1>
             <p className="section-subtitle">{model.subtitle}</p>
           </div>
-          <Link href={model.ctaHref} className="button-primary">
-            {model.ctaLabel}
-          </Link>
+          <div className="flex flex-col items-start gap-3 lg:items-end">
+            {model.verificationSummary ? (
+              <Link
+                href={model.verificationSummary.href}
+                className="rounded-[1.4rem] border border-white/75 bg-white/85 px-4 py-3"
+              >
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                  {model.verificationSummary.label}
+                </p>
+                <div className="mt-2">
+                  <VerificationStatusBadge
+                    label={model.verificationSummary.state}
+                    tone={getVerificationStatusTone(model.verificationSummary.status)}
+                  />
+                </div>
+              </Link>
+            ) : null}
+            <Link href={model.ctaHref} className="button-primary">
+              {model.ctaLabel}
+            </Link>
+          </div>
         </div>
 
         <div className="mt-8 grid gap-4 md:grid-cols-3">
@@ -52,8 +72,8 @@ export function ProfileShellView({ model }: ProfileShellViewProps) {
         </div>
 
         <div className="grid gap-4">
-          {model.modules.map((module) => (
-            <div key={module.title} className="panel rounded-[1.8rem] p-5">
+          {model.modules.map((module) => {
+            const content = (
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="text-lg font-semibold text-slate-950">
@@ -67,8 +87,26 @@ export function ProfileShellView({ model }: ProfileShellViewProps) {
                   {module.state}
                 </span>
               </div>
-            </div>
-          ))}
+            );
+
+            if (module.href) {
+              return (
+                <Link
+                  key={module.title}
+                  href={module.href}
+                  className="panel rounded-[1.8rem] p-5"
+                >
+                  {content}
+                </Link>
+              );
+            }
+
+            return (
+              <div key={module.title} className="panel rounded-[1.8rem] p-5">
+                {content}
+              </div>
+            );
+          })}
         </div>
       </section>
 
