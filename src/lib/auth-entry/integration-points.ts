@@ -1,4 +1,4 @@
-import type { AuthEntryMode } from "@/lib/auth-entry/branch-auth-entry-adapter";
+export type AuthEntryMode = "login" | "signup";
 
 // Phase 1 C/D branches should replace these placeholders with their route entry points.
 const DEFAULT_PATH_BY_MODE: Record<AuthEntryMode, string> = {

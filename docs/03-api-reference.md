@@ -1,6 +1,6 @@
 # 03. API Reference
 
-현재 앱은 기본적으로 mock 중심 데모 앱이지만, `RECRUIT_DATA_SOURCE=database`일 때는 PostgreSQL + Prisma를 사용하도록 scaffold가 준비되어 있다. 프론트와 문서 흐름을 맞추기 위해 Next.js Route Handler 형태의 API 계약을 정의한다.
+현재 앱은 기본적으로 mock 중심 데모 앱이지만, `RECRUIT_DATA_SOURCE=database`일 때는 PostgreSQL + Prisma를 사용하도록 scaffold가 준비되어 있다. Recruit와 Phase 1 Identity 모두 같은 data source 모드를 따르며, 프론트와 문서 흐름을 맞추기 위해 Next.js Route Handler 형태의 API 계약을 정의한다.
 
 ## 1) 공통 규칙
 
@@ -8,9 +8,14 @@
 - Content-Type: `application/json`
 - 시간 포맷: `ISO-8601`
 - 키 네이밍: `camelCase`
-- 인증 방식:
-  - MVP recruit 조회/지원 계약은 기존 무인증 문서를 유지한다.
-  - Phase 1 B 브랜치에서는 `feature/p1-identity-contracts` 머지 전까지 branch-local auth entry cookie를 임시로 사용한다.
+- Recruit API 인증 방식: 없음
+- Auth / Onboarding 인증 방식: `campus-link.session` HTTP-only cookie
+
+공통 enum:
+
+- `role`: `student | admin`
+- `onboarding.status`: `not_started | in_progress | completed`
+- `onboarding.currentStep`: `account | interests | profile | complete`
 
 공통 실패 응답 예시:
 
@@ -29,10 +34,10 @@
 | Status | 의미 |
 | --- | --- |
 | `200` | 조회 성공 |
-| `201` | mock 생성 성공 |
+| `201` | 생성 성공 |
 | `202` | mock 지원 접수 성공 |
 | `400` | 입력 오류 |
-| `401` | 세션 진입 필요 |
+| `401` | 인증 필요 또는 인증 실패 |
 | `404` | 모집글 없음 |
 | `409` | 중복 지원 등 충돌 |
 
@@ -40,43 +45,18 @@
 
 | Method | Endpoint | Auth | 설명 |
 | --- | --- | --- | --- |
-| `GET` | `/auth-entry/session` | Temp | 임시 auth entry 세션 존재 여부 확인 |
-| `POST` | `/auth-entry/session` | No | 로그인/회원가입 진입 세션 생성 |
-| `DELETE` | `/auth-entry/session` | Temp | 임시 auth entry 세션 종료 |
 | `GET` | `/posts` | No | 모집글 목록 조회 |
 | `GET` | `/posts/{slug}` | No | 모집글 상세 조회 |
-| `POST` | `/posts` | Temp | 모집글 mock 생성 |
+| `POST` | `/posts` | No | 모집글 mock 생성 |
 | `POST` | `/posts/{slug}/apply` | No | 지원하기 mock 제출 |
+| `POST` | `/auth/signup` | No | 학생 계정 생성 후 세션 시작 |
+| `POST` | `/auth/login` | No | 기존 계정 로그인 후 세션 시작 |
+| `GET` | `/auth/session` | Optional Cookie | 현재 세션/사용자/온보딩 컨텍스트 조회 |
+| `DELETE` | `/auth/session` | Optional Cookie | 현재 세션 종료 |
+| `GET` | `/onboarding/state` | Yes | 현재 사용자 온보딩 상태 조회 |
+| `PUT` | `/onboarding/state` | Yes | 온보딩 step/키워드/완료 상태 갱신 |
 
 ## 4) 핵심 API 상세
-
-### `POST /api/auth-entry/session`
-
-참고:
-
-- 이 엔드포인트는 `feature/p1-auth-entry` 브랜치의 임시 진입 어댑터다.
-- 최종 `User` / `Session` 계약을 의미하지 않는다.
-
-Request:
-
-```json
-{
-  "mode": "signup",
-  "email": "student@example.com",
-  "displayName": "정글 팀장"
-}
-```
-
-Success:
-
-```json
-{
-  "success": true,
-  "data": {
-    "nextPath": "/recruit/new"
-  }
-}
-```
 
 ### `GET /api/posts`
 
@@ -138,10 +118,6 @@ Success:
 ```
 
 ### `POST /api/posts`
-
-Auth:
-
-- Phase 1 B 브랜치에서는 임시 auth entry session 필요
 
 Request:
 
@@ -230,7 +206,204 @@ Success:
 }
 ```
 
-## 5) 오픈 이슈
+## 5) Phase 1 Identity API
+
+mock 모드 기준 demo 계정:
+
+- 학생: `student@campus-link.demo` / `jungle1234`
+- 관리자: `admin@campus-link.demo` / `admin1234`
+
+### `POST /api/auth/signup`
+
+Request:
+
+```json
+{
+  "email": "new-user@example.com",
+  "password": "jungle1234",
+  "displayName": "김정글",
+  "campus": "Krafton Jungle"
+}
+```
+
+Success:
+
+```json
+{
+  "success": true,
+  "data": {
+    "authenticated": true,
+    "session": {
+      "id": "sess_123",
+      "userId": "user_123",
+      "createdAt": "2026-03-11T09:00:00.000Z",
+      "expiresAt": "2026-03-18T09:00:00.000Z"
+    },
+    "user": {
+      "id": "user_123",
+      "email": "new-user@example.com",
+      "displayName": "김정글",
+      "campus": "Krafton Jungle",
+      "role": "student",
+      "createdAt": "2026-03-11T09:00:00.000Z",
+      "updatedAt": "2026-03-11T09:00:00.000Z"
+    },
+    "onboarding": {
+      "userId": "user_123",
+      "status": "in_progress",
+      "currentStep": "interests",
+      "interestKeywords": [],
+      "completedAt": null,
+      "createdAt": "2026-03-11T09:00:00.000Z",
+      "updatedAt": "2026-03-11T09:00:00.000Z"
+    },
+    "dataSource": "mock"
+  }
+}
+```
+
+실패 예시:
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "EMAIL_ALREADY_IN_USE",
+    "message": "이미 사용 중인 이메일입니다."
+  }
+}
+```
+
+노트:
+
+- 성공 시 `campus-link.session` cookie가 설정된다.
+- public signup은 기본적으로 `student` role만 생성한다.
+
+### `POST /api/auth/login`
+
+Request:
+
+```json
+{
+  "email": "student@campus-link.demo",
+  "password": "jungle1234"
+}
+```
+
+Success:
+
+- 응답 shape는 `POST /api/auth/signup`과 동일하다.
+- mock 모드에서는 demo student/admin 계정으로 role 분기 시나리오를 바로 테스트할 수 있다.
+
+실패 예시:
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "INVALID_CREDENTIALS",
+    "message": "이메일 또는 비밀번호가 올바르지 않습니다."
+  }
+}
+```
+
+### `GET /api/auth/session`
+
+Success when authenticated:
+
+- 응답 shape는 `POST /api/auth/signup`과 동일하다.
+
+Success when unauthenticated:
+
+```json
+{
+  "success": true,
+  "data": {
+    "authenticated": false,
+    "session": null,
+    "user": null,
+    "onboarding": null,
+    "dataSource": "mock"
+  }
+}
+```
+
+노트:
+
+- cookie가 없거나 만료된 세션이면 `200`으로 anonymous context를 돌려준다.
+- downstream 브랜치는 이 endpoint를 bootstrap source of truth로 사용한다.
+
+### `DELETE /api/auth/session`
+
+Success:
+
+```json
+{
+  "success": true,
+  "data": {
+    "cleared": true,
+    "dataSource": "mock"
+  }
+}
+```
+
+### `GET /api/onboarding/state`
+
+Success:
+
+```json
+{
+  "success": true,
+  "data": {
+    "onboarding": {
+      "userId": "user_123",
+      "status": "in_progress",
+      "currentStep": "interests",
+      "interestKeywords": ["frontend", "hackathon"],
+      "completedAt": null,
+      "createdAt": "2026-03-11T09:00:00.000Z",
+      "updatedAt": "2026-03-11T09:20:00.000Z"
+    },
+    "dataSource": "mock"
+  }
+}
+```
+
+실패 예시:
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "AUTH_REQUIRED",
+    "message": "온보딩 상태를 조회하려면 로그인해야 합니다."
+  }
+}
+```
+
+### `PUT /api/onboarding/state`
+
+Request:
+
+```json
+{
+  "currentStep": "profile",
+  "status": "in_progress",
+  "interestKeywords": ["frontend", "typescript", "hackathon"]
+}
+```
+
+Success:
+
+- 응답 shape는 `GET /api/onboarding/state`와 동일하다.
+
+노트:
+
+- `currentStep`이 `complete`이면 서버는 `status`를 `completed`로 맞춘다.
+- `status`가 `completed`이면 서버는 `currentStep`을 `complete`로 맞춘다.
+- keyword 배열은 trim + 중복 제거 후 저장한다.
+
+## 6) 오픈 이슈
 
 - [ ] 실제 서비스 전환 시 인증 방식을 어떻게 추가할지
 - [ ] localStorage fallback 데이터를 서버 DB로 마이그레이션할 방식

@@ -15,15 +15,22 @@ enum RecruitCategory {
   hackathon
 }
 
-enum UserRole {
+enum Role {
   student
   admin
 }
 
-enum VerificationStatus {
-  pending
-  verified
-  rejected
+enum OnboardingStatus {
+  not_started
+  in_progress
+  completed
+}
+
+enum OnboardingStep {
+  account
+  interests
+  profile
+  complete
 }
 
 enum ApplicationStatus {
@@ -34,16 +41,39 @@ enum ApplicationStatus {
 }
 
 model User {
-  id                 String               @id @default(cuid())
-  email              String               @unique
-  name               String?
-  campus             String?
-  role               UserRole             @default(student)
-  verificationStatus VerificationStatus   @default(pending)
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-  recruitPosts       RecruitPost[]
-  applications       RecruitApplication[]
+  id              String            @id @default(cuid())
+  email           String            @unique
+  passwordHash    String
+  displayName     String
+  campus          String?
+  role            Role              @default(student)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  sessions        Session[]
+  onboardingState OnboardingState?
+  recruitPosts    RecruitPost[]
+  applications    RecruitApplication[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+model OnboardingState {
+  userId           String           @id
+  status           OnboardingStatus @default(not_started)
+  currentStep      OnboardingStep   @default(account)
+  interestKeywords String[]
+  completedAt      DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model RecruitPost {

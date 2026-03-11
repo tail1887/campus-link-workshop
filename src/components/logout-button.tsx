@@ -9,7 +9,7 @@ export function LogoutButton() {
 
   const logout = () => {
     startTransition(async () => {
-      await fetch("/api/auth-entry/session", {
+      await fetch("/api/auth/session", {
         method: "DELETE",
       });
 

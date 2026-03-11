@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
-import { AuthEntryForm } from "@/components/auth-entry-form";
-import { getAuthEntrySession } from "@/lib/auth-entry/branch-auth-entry-adapter";
+import { AuthForm } from "@/components/auth-form";
 import { getDefaultAuthEntryNextPath } from "@/lib/auth-entry/integration-points";
+import { getCurrentAuthContext } from "@/lib/server/auth-context";
 
 type LoginPageProps = {
   searchParams: Promise<{ next?: string }>;
@@ -10,15 +10,15 @@ type LoginPageProps = {
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const query = await searchParams;
   const nextPath = query.next ?? getDefaultAuthEntryNextPath("login");
-  const session = await getAuthEntrySession();
+  const authContext = await getCurrentAuthContext();
 
-  if (session) {
+  if (authContext.authenticated) {
     redirect(nextPath);
   }
 
   return (
     <div className="shell pb-8 pt-6">
-      <AuthEntryForm mode="login" nextPath={nextPath} />
+      <AuthForm mode="login" nextPath={nextPath} />
     </div>
   );
 }

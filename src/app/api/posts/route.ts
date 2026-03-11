@@ -3,7 +3,6 @@ import {
   buildSlugFromTitle,
   filterPosts,
 } from "@/lib/recruit";
-import { getAuthEntrySession } from "@/lib/auth-entry/branch-auth-entry-adapter";
 import {
   createRecruitPost,
   getRecruitDataSource,
@@ -37,21 +36,6 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const session = await getAuthEntrySession();
-
-  if (!session) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: "AUTH_ENTRY_REQUIRED",
-          message: "글쓰기 전에 로그인 또는 회원가입으로 세션을 시작해주세요.",
-        },
-      },
-      { status: 401 },
-    );
-  }
-
   const body = (await request.json()) as Partial<CreateRecruitPostInput>;
 
   if (

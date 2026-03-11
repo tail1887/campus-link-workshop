@@ -111,6 +111,11 @@
 
 ## 7) 테스트 전략
 
+- 로컬 개발 환경은 운영체제와 관계없이 Node.js 24를 기준으로 맞추고, 루트 `.nvmrc`를 우선 사용한다.
+- 새 머신에서는 `npm install` 직후 `postinstall`로 Prisma Client가 자동 생성되므로, macOS에서도 별도 수동 generate 없이 `npm run dev`, `npm run build` 흐름을 바로 시작할 수 있다.
+- 기본 개발 모드는 `RECRUIT_DATA_SOURCE=mock` 이므로 `.env`와 PostgreSQL은 필수가 아니다. DB 모드가 필요할 때만 `.env.example`을 복사해 `.env`를 만들고 값을 채운다.
+- 줄바꿈 차이로 인한 협업 잡음을 줄이기 위해 루트 `.gitattributes` 기준 LF 정규화를 유지한다.
+
 - Smoke Test: 메인 > 목록 > 상세 > 지원하기 > 글쓰기 흐름이 브라우저에서 이어지는지 확인
 - DB Setup Test: `npm run db:generate`
 - Migration Test: `npm run db:deploy`
