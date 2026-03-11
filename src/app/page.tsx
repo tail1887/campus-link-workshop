@@ -2,11 +2,12 @@ import Link from "next/link";
 import { PostCard } from "@/components/post-card";
 import { categoryMeta } from "@/lib/recruit";
 import { listRecruitPosts } from "@/lib/server/recruit-repository";
+import type { RecruitPost } from "@/types/recruit";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const posts = await listRecruitPosts();
+  const posts: RecruitPost[] = await listRecruitPosts();
   const featuredPosts = posts.filter((post) => post.highlight).slice(0, 3);
   const openRoles = posts.reduce((sum, post) => sum + post.capacity, 0);
   const campusCount = new Set(posts.map((post) => post.campus)).size;
