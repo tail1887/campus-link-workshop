@@ -162,7 +162,8 @@
 5. 독립 Git 저장소 초기화
 6. 브랜치 규칙, 커밋 템플릿, PR 템플릿 추가
 7. PR CI와 main 자동 배포 GitHub Actions 추가
-8. GitHub 공개 저장소 생성 및 브랜치 보호 규칙 적용 예정
+8. GitHub 공개 저장소 생성과 Vercel 시크릿 연결
+9. main 브랜치 보호 규칙 적용 예정
 
 현재 완료 상태:
 
@@ -170,6 +171,6 @@
 - [x] PR용 CI 워크플로 작성
 - [x] main 자동 배포 워크플로 작성
 - [x] 브랜치 / 커밋 / PR 규칙 문서화
-- [ ] GitHub 저장소 생성 및 첫 push
-- [ ] GitHub Secrets 등록
+- [x] GitHub 저장소 생성 및 첫 push
+- [x] GitHub Secrets 등록
 - [ ] main 브랜치 보호 규칙 적용

@@ -79,6 +79,7 @@ npm run build
 
 - GitHub 저장소를 Vercel에 Import 하면 바로 배포 가능
 - MVP 기준 별도 환경 변수 없음
+- GitHub Repository: [tail1887/campus-link-workshop](https://github.com/tail1887/campus-link-workshop)
 
 ## 프로젝트 문서
 
