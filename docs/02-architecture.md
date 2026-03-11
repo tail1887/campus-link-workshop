@@ -22,25 +22,34 @@ flowchart LR
     API --> RR["Recruit Repository"]
     API --> IR["Identity Repository"]
     API --> PR["Profile Communication Repository"]
+    API --> AR["AI Platform Repository"]
     RR --> DB["Prisma + PostgreSQL"]
     RR --> SEED["Seed Mock Data"]
     IR --> DB
     IR --> IM["Mock Identity Store"]
     PR --> DB
     PR --> PM["Mock Profile Store"]
+    AR --> DB
+    AR --> AM["Mock AI Platform Store"]
+    AR --> PB["Provider Boundary"]
+    PB --> GH["GitHub Connector"]
+    PB --> AI["AI Suggestion Provider"]
 ```
 
 설명:
 
 - 프론트 역할: 랜딩, 목록, 상세, 글쓰기, 지원하기 화면 렌더링과 상호작용 처리
-- API 역할: 모집글 API와 함께 Phase 1 auth / onboarding, Phase 2 profile / resume / verification / inquiry / alert preference API 응답 제공
+- API 역할: 모집글 API와 함께 Phase 1 auth / onboarding, Phase 2 profile / resume / verification / inquiry / alert preference, Phase 3 GitHub / AI job API 응답 제공
 - Repository 역할: `RECRUIT_DATA_SOURCE` 값에 따라 PostgreSQL 또는 mock 저장소를 선택
 - Recruit 데이터 저장 방식: 기본값은 seed 데이터와 localStorage fallback, DB 모드에서는 Prisma를 통해 PostgreSQL 사용
 - Identity 데이터 저장 방식: Phase 1 기준으로 같은 data source 모드를 따르며, mock 모드에서는 메모리 저장소와 demo 계정을 사용하고 DB 모드에서는 Prisma `User`, `Session`, `OnboardingState`를 사용한다
 - Profile Communication 데이터 저장 방식: Phase 2 기준으로 같은 data source 모드를 따르며, mock 모드에서는 demo 프로필/이력서/문의/알림 설정 store를 사용하고 DB 모드에서는 Prisma `Profile`, `Resume`, `Verification`, `Inquiry`, `AlertPreference`를 사용한다
+- AI Platform 데이터 저장 방식: Phase 3 기준으로 같은 data source 모드를 따르며, mock 모드에서는 runtime GitHub connection/job store를 사용하고 DB 모드에서는 Prisma `GitHubConnection`, `AiJob`를 사용한다
+- Provider Boundary 역할: GitHub 연결/분석과 suggestion 생성을 repository 뒤에 감춰 downstream 브랜치가 provider별 raw 응답 shape를 직접 다루지 않게 한다
 - 세션 경계: 세션 본문은 서버 저장소에 보관하고, 브라우저에는 `campus-link.session` HTTP-only cookie로 세션 식별자만 전달한다
 - 프로필 셸 방식: Phase 1 D 트랙에서는 A 트랙 계약이 머지되기 전까지 branch-local adapter로 사용자/관리자 프로필 셸과 역할별 진입 구조만 제공한다
 - Phase 2 기본 레코드 방식: `Profile`, `Resume`, `Verification`, `AlertPreference`는 저장 레코드가 없어도 identity 기반 fallback contract를 먼저 반환하고, 첫 수정/제출 시 영구 저장 경계에 upsert 한다
+- Phase 3 job 방식: GitHub 분석과 AI suggestion은 모두 poll 기반 `AiJob` 상태 모델을 따르며 `queued -> running -> succeeded | failed` 전이를 공유한다
 
 ## 3) 레이어 구조
 
@@ -49,11 +58,14 @@ flowchart LR
 - Feature Layer: 모집글 목록 필터링, 글쓰기, 지원하기 흐름
 - Identity Contracts: `User`, `Role`, `Session`, `OnboardingState`와 auth context 타입
 - Phase 2 Contracts: `Profile`, `Resume`, `Verification`, `Inquiry`, `AlertPreference`와 각 enum / payload 타입
+- Phase 3 Contracts: `GitHubConnection`, `CreateGitHubAnalysisJobRequest`, `CreateAiSuggestionJobRequest`, `AiJob`, `AiSuggestionResult`와 provider catalog 타입
 - Profile Shell Adapter: A 트랙 계약이 머지되기 전까지 사용자/관리자 프로필 셸에 임시 view model을 공급하는 branch-local adapter
 - Recruit Repository: Prisma/PostgreSQL과 mock 저장소를 전환하는 유틸
 - Identity Repository: mock 계정, 세션, 온보딩 상태를 관리하고 Prisma 저장소와 전환하는 유틸
 - Profile Communication Repository: profile / resume / verification / inquiry / alert preference 저장 경계를 관리하고 mock/Prisma를 전환하는 유틸
-- Route Handlers: `/api/posts`, `/api/auth/*`, `/api/onboarding/state`, `/api/profile`, `/api/resume`, `/api/verification`, `/api/inquiries`, `/api/alert-preferences` 등 API 응답
+- AI Platform Repository: GitHub 연결 1:1 레코드와 `AiJob` 생성/조회 경계를 관리하고 mock/Prisma를 전환하는 유틸
+- AI Provider Boundary: GitHub 분석기와 suggestion 생성기를 `mock_analysis`, `mock_suggestions`, 향후 `openai` 같은 provider key 뒤에 숨기는 실행 계층
+- Route Handlers: `/api/posts`, `/api/auth/*`, `/api/onboarding/state`, `/api/profile`, `/api/resume`, `/api/verification`, `/api/inquiries`, `/api/alert-preferences`, `/api/github/*`, `/api/ai/suggestions/*` 등 API 응답
 - Session Helper: cookie 기반 현재 세션 조회를 downstream 브랜치가 재사용할 수 있게 제공
 
 현재 프로젝트 구조:
@@ -64,8 +76,10 @@ prisma/
 src/
 ├─ app/
 │  ├─ api/
+│  │  ├─ ai/
 │  │  ├─ auth/
 │  │  ├─ alert-preferences/
+│  │  ├─ github/
 │  │  ├─ inquiries/
 │  │  ├─ profile/
 │  │  ├─ resume/
@@ -82,6 +96,7 @@ src/
 ├─ components/
 ├─ data/
 ├─ lib/
+│  ├─ ai-platform.ts
 │  └─ server/
 └─ types/
 ```
@@ -281,6 +296,48 @@ src/
 | `createdAt` | `string` | 최초 생성 시각 | Yes |
 | `updatedAt` | `string` | 마지막 수정 시각 | Yes |
 
+### Entity M. GitHubConnection
+
+| 필드 | 타입 | 설명 | 필수 여부 |
+| --- | --- | --- | --- |
+| `userId` | `string` | `User.id`와 동일한 1:1 key | Yes |
+| `username` | `string \| null` | 연결된 GitHub 사용자명 | No |
+| `profileUrl` | `string \| null` | 연결된 GitHub 프로필 URL | No |
+| `provider` | `"mock_github" \| "github_oauth"` | 연결 provider key | Yes |
+| `status` | `"not_connected" \| "connected" \| "error"` | 현재 연결 상태 | Yes |
+| `connectedAt` | `string \| null` | 최초 또는 최근 연결 시각 | No |
+| `lastValidatedAt` | `string \| null` | 마지막 연결 검증 시각 | No |
+| `lastAnalysisJobId` | `string \| null` | 가장 최근 GitHub 분석 job id | No |
+| `createdAt` | `string` | 최초 생성 시각 | Yes |
+| `updatedAt` | `string` | 마지막 수정 시각 | Yes |
+
+경계 메모:
+
+- `Profile.links`의 일반 `github` 링크는 표시용이며, Phase 3 source of truth는 provider-backed `GitHubConnection`이다.
+- 연결 레코드가 아직 저장되지 않았더라도 API는 `status=not_connected` 기본 계약을 먼저 반환한다.
+
+### Entity N. AiJob
+
+| 필드 | 타입 | 설명 | 필수 여부 |
+| --- | --- | --- | --- |
+| `id` | `string` | job 식별자 | Yes |
+| `userId` | `string` | job 소유 사용자 id | Yes |
+| `kind` | `"github_analysis" \| "ai_suggestion"` | job 종류 | Yes |
+| `status` | `"queued" \| "running" \| "succeeded" \| "failed"` | 비동기 상태 | Yes |
+| `provider` | `string` | 실제 실행 provider key | Yes |
+| `request` | `object` | 생성 시점 request snapshot | Yes |
+| `result` | `object \| null` | 성공 시 result payload | No |
+| `error` | `{ code, message, retryable } \| null` | 실패 시 에러 요약 | No |
+| `requestedAt` | `string` | job 생성 시각 | Yes |
+| `startedAt` | `string \| null` | provider 실행 시작 시각 | No |
+| `completedAt` | `string \| null` | 성공/실패 완료 시각 | No |
+| `updatedAt` | `string` | 마지막 상태 변경 시각 | Yes |
+
+경계 메모:
+
+- GitHub 분석과 AI suggestion은 서로 다른 기능이지만 같은 `AiJob` 상태 모델을 공유한다.
+- downstream 브랜치는 job polling만 믿고, provider별 raw 응답이나 별도 loading enum을 독자적으로 만들지 않는다.
+
 ## 5) 정합성 규칙
 
 - `slug`는 고유해야 한다.
@@ -299,6 +356,12 @@ src/
 - `Inquiry.contactEmail`은 유효한 이메일이어야 하고, 사용자는 자신의 문의 레코드만 조회한다.
 - `AlertPreference.quietHours.start/end`는 `HH:MM` 24시간 형식을 따른다.
 - `ResumeCompleteness`는 저장소에 별도 보관하지 않고 `Resume` 본문에서 계산한다.
+- `GitHubConnection`은 `User.id` 기준 1:1 레코드로 유지하고, `status=connected`이면 `username`과 `profileUrl`이 함께 있어야 한다.
+- `GitHubConnection.lastAnalysisJobId`는 같은 사용자 소유의 `AiJob(kind=github_analysis)`만 가리킬 수 있다.
+- `AiJob.userId`는 소유 사용자만 조회할 수 있다.
+- `AiJob.kind=github_analysis` 생성 시점에는 유효한 `GitHubConnection(status=connected)`가 먼저 존재해야 한다.
+- `AiJob.status` 전이는 `queued -> running -> succeeded | failed`만 허용한다.
+- `AiJob.request`와 `AiJob.result`의 세부 schema는 `kind`에 따라 달라지며, downstream 브랜치는 Phase 3 A 계약의 key 이름을 그대로 사용한다.
 
 ## 6) 핵심 시퀀스 다이어그램
 
@@ -427,6 +490,55 @@ sequenceDiagram
     A->>R: createInquiry() or updateAlertPreference()
     R->>D: write Inquiry / AlertPreference
     A-->>C: updated communication payload
+```
+
+### Flow H. GitHub 연결 후 분석 job 생성
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant A as Next API
+    participant R as AI Platform Repository
+    participant D as PostgreSQL or Mock
+    participant P as Provider Boundary
+
+    C->>A: PUT /api/github/connection
+    A->>R: upsertGitHubConnectionRecord()
+    R->>D: write GitHubConnection
+    A-->>C: connected contract
+    C->>A: POST /api/github/analysis/jobs
+    A->>R: createGitHubAnalysisJobRecord()
+    R->>D: write queued AiJob
+    A-->>C: accepted job payload
+    C->>A: GET /api/github/analysis/jobs/{jobId}
+    A->>R: getGitHubAnalysisJobRecord()
+    R->>P: executeGitHubAnalysis()
+    P-->>R: GitHubAnalysisResult
+    R->>D: update AiJob succeeded
+    A-->>C: job + result
+```
+
+### Flow I. AI suggestion job 생성 및 polling
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant A as Next API
+    participant R as AI Platform Repository
+    participant D as PostgreSQL or Mock
+    participant P as Provider Boundary
+
+    C->>A: POST /api/ai/suggestions/jobs
+    A->>A: request schema validation
+    A->>R: createAiSuggestionJobRecord()
+    R->>D: write queued AiJob
+    A-->>C: accepted job payload
+    C->>A: GET /api/ai/suggestions/jobs/{jobId}
+    A->>R: getAiSuggestionJobRecord()
+    R->>P: executeAiSuggestions()
+    P-->>R: AiSuggestionResult
+    R->>D: update AiJob succeeded
+    A-->>C: job + suggestions
 ```
 
 ## 7) 운영/배포 메모

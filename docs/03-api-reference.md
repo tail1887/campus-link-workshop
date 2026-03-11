@@ -1,6 +1,6 @@
 # 03. API Reference
 
-현재 앱은 기본적으로 mock 중심 데모 앱이지만, `RECRUIT_DATA_SOURCE=database`일 때는 PostgreSQL + Prisma를 사용하도록 scaffold가 준비되어 있다. Recruit, Phase 1 Identity, Phase 2 Profile Communication 모두 같은 data source 모드를 따르며, 프론트와 문서 흐름을 맞추기 위해 Next.js Route Handler 형태의 API 계약을 정의한다.
+현재 앱은 기본적으로 mock 중심 데모 앱이지만, `RECRUIT_DATA_SOURCE=database`일 때는 PostgreSQL + Prisma를 사용하도록 scaffold가 준비되어 있다. Recruit, Phase 1 Identity, Phase 2 Profile Communication, Phase 3 AI Platform 모두 같은 data source 모드를 따르며, 프론트와 문서 흐름을 맞추기 위해 Next.js Route Handler 형태의 API 계약을 정의한다.
 
 ## 1) 공통 규칙
 
@@ -9,7 +9,7 @@
 - 시간 포맷: `ISO-8601`
 - 키 네이밍: `camelCase`
 - Recruit API 인증 방식: 없음
-- Auth / Onboarding / Phase 2 Profile Communication 인증 방식: `campus-link.session` HTTP-only cookie
+- Auth / Onboarding / Phase 2 Profile Communication / Phase 3 AI Platform 인증 방식: `campus-link.session` HTTP-only cookie
 
 공통 enum:
 
@@ -26,6 +26,10 @@
 - `inquiry.category`: `general | account | verification | resume | report`
 - `inquiry.status`: `open | in_review | resolved`
 - `alertPreference.digestFrequency`: `off | daily | weekly`
+- `githubConnection.status`: `not_connected | connected | error`
+- `githubAnalysis.focus`: `portfolio_overview | team_fit | resume_enrichment`
+- `aiJob.kind`: `github_analysis | ai_suggestion`
+- `aiJob.status`: `queued | running | succeeded | failed`
 
 공통 실패 응답 예시:
 
@@ -75,6 +79,13 @@
 | `POST` | `/inquiries` | Yes | 새 문의 제출 |
 | `GET` | `/alert-preferences` | Yes | 현재 사용자 알림 설정 조회 |
 | `PUT` | `/alert-preferences` | Yes | 현재 사용자 알림 설정 수정 |
+| `GET` | `/github/connection` | Yes | 현재 사용자 GitHub 연결 상태 조회 |
+| `PUT` | `/github/connection` | Yes | 현재 사용자 GitHub 연결 저장/갱신 |
+| `DELETE` | `/github/connection` | Yes | 현재 사용자 GitHub 연결 해제 |
+| `POST` | `/github/analysis/jobs` | Yes | GitHub 분석 job 생성 |
+| `GET` | `/github/analysis/jobs/{jobId}` | Yes | GitHub 분석 job polling 조회 |
+| `POST` | `/ai/suggestions/jobs` | Yes | resume 또는 recruit-post suggestion job 생성 |
+| `GET` | `/ai/suggestions/jobs/{jobId}` | Yes | suggestion job polling 조회 |
 
 ## 4) 핵심 Recruit API
 
@@ -838,8 +849,496 @@ Success:
 
 - `quietHours.start`와 `quietHours.end`는 `HH:MM` 24시간 형식을 따라야 한다.
 
-## 7) 오픈 이슈
+## 7) Phase 3 AI Platform API
+
+공통 노트:
+
+- `GET /api/github/connection`은 저장 레코드가 없더라도 `status=not_connected` 기본 계약을 반환한다.
+- `POST /api/github/analysis/jobs`, `POST /api/ai/suggestions/jobs`는 모두 `202 Accepted`와 함께 `queued` job payload를 반환한다.
+- Phase 3 job endpoint는 poll 기반으로 동작한다. mock provider 기준으로 첫 `GET`은 보통 `running`, 다음 `GET`은 `succeeded`를 반환한다.
+- 모든 Phase 3 응답은 현재 provider catalog와 `dataSource`를 함께 돌려준다.
+
+### `GET /api/github/connection`
+
+Success:
+
+```json
+{
+  "success": true,
+  "data": {
+    "connection": {
+      "userId": "user_123",
+      "username": "campus-link-demo",
+      "profileUrl": "https://github.com/campus-link-demo",
+      "provider": "mock_github",
+      "status": "connected",
+      "connectedAt": "2026-03-11T09:00:00.000Z",
+      "lastValidatedAt": "2026-03-11T09:00:00.000Z",
+      "lastAnalysisJobId": "job_gh_123",
+      "createdAt": "2026-03-11T09:00:00.000Z",
+      "updatedAt": "2026-03-11T09:00:00.000Z"
+    },
+    "providers": {
+      "githubConnection": {
+        "provider": "mock_github",
+        "label": "Mock GitHub Connector"
+      },
+      "githubAnalysis": {
+        "provider": "mock_analysis",
+        "label": "Mock GitHub Analyzer"
+      },
+      "aiSuggestion": {
+        "provider": "mock_suggestions",
+        "label": "Mock Suggestion Engine"
+      }
+    },
+    "dataSource": "mock"
+  }
+}
+```
+
+노트:
+
+- Phase 3 B 브랜치는 이 endpoint를 GitHub 연결/상태 관리의 source of truth로 사용한다.
+
+### `PUT /api/github/connection`
+
+Request:
+
+```json
+{
+  "username": "campus-link-demo"
+}
+```
+
+Success:
+
+- 응답 shape는 `GET /api/github/connection`과 동일하다.
+
+노트:
+
+- `profileUrl`은 생략 가능하며, 생략하면 서버가 `https://github.com/{username}`으로 채운다.
+- `username`에는 `@campus-link-demo` 또는 전체 GitHub 프로필 URL을 넣어도 서버가 정규화한다.
+
+### `DELETE /api/github/connection`
+
+Success:
+
+```json
+{
+  "success": true,
+  "data": {
+    "connection": {
+      "userId": "user_123",
+      "username": null,
+      "profileUrl": null,
+      "provider": "mock_github",
+      "status": "not_connected",
+      "connectedAt": null,
+      "lastValidatedAt": null,
+      "lastAnalysisJobId": null,
+      "createdAt": "2026-03-11T09:00:00.000Z",
+      "updatedAt": "2026-03-11T10:40:00.000Z"
+    },
+    "providers": {
+      "githubConnection": {
+        "provider": "mock_github",
+        "label": "Mock GitHub Connector"
+      },
+      "githubAnalysis": {
+        "provider": "mock_analysis",
+        "label": "Mock GitHub Analyzer"
+      },
+      "aiSuggestion": {
+        "provider": "mock_suggestions",
+        "label": "Mock Suggestion Engine"
+      }
+    },
+    "dataSource": "mock"
+  }
+}
+```
+
+### `POST /api/github/analysis/jobs`
+
+Request:
+
+```json
+{
+  "focus": "portfolio_overview",
+  "maxRepositories": 3,
+  "preferredLanguages": ["TypeScript", "Prisma"]
+}
+```
+
+Success:
+
+```json
+{
+  "success": true,
+  "data": {
+    "job": {
+      "id": "job_gh_123",
+      "userId": "user_123",
+      "kind": "github_analysis",
+      "status": "queued",
+      "provider": "mock_analysis",
+      "request": {
+        "focus": "portfolio_overview",
+        "maxRepositories": 3,
+        "preferredLanguages": ["TypeScript", "Prisma"]
+      },
+      "result": null,
+      "error": null,
+      "requestedAt": "2026-03-11T10:45:00.000Z",
+      "startedAt": null,
+      "completedAt": null,
+      "updatedAt": "2026-03-11T10:45:00.000Z"
+    },
+    "providers": {
+      "githubConnection": {
+        "provider": "mock_github",
+        "label": "Mock GitHub Connector"
+      },
+      "githubAnalysis": {
+        "provider": "mock_analysis",
+        "label": "Mock GitHub Analyzer"
+      },
+      "aiSuggestion": {
+        "provider": "mock_suggestions",
+        "label": "Mock Suggestion Engine"
+      }
+    },
+    "dataSource": "mock"
+  }
+}
+```
+
+연결 누락 실패 예시:
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "GITHUB_CONNECTION_REQUIRED",
+    "message": "분석을 시작하기 전에 GitHub 계정을 먼저 연결해주세요."
+  }
+}
+```
+
+### `GET /api/github/analysis/jobs/{jobId}`
+
+Success:
+
+```json
+{
+  "success": true,
+  "data": {
+    "job": {
+      "id": "job_gh_123",
+      "userId": "user_123",
+      "kind": "github_analysis",
+      "status": "succeeded",
+      "provider": "mock_analysis",
+      "request": {
+        "focus": "portfolio_overview",
+        "maxRepositories": 3,
+        "preferredLanguages": ["TypeScript", "Prisma"]
+      },
+      "result": {
+        "username": "campus-link-demo",
+        "profileUrl": "https://github.com/campus-link-demo",
+        "analyzedAt": "2026-03-11T10:45:05.000Z",
+        "focus": "portfolio_overview",
+        "summary": "campus-link-demo의 GitHub는 TypeScript 중심 포트폴리오와 데모 성격 레포가 분명해 Phase 3 분석 카드의 기본 스토리라인으로 쓰기 좋습니다.",
+        "strengths": [
+          "TypeScript 중심의 작업 흔적이 뚜렷합니다.",
+          "짧은 스프린트 데모에 맞는 레포 분리가 잘 드러납니다.",
+          "협업형 프로젝트 설명과 역할 힌트가 UI/문서 중심 포지션에 잘 맞습니다."
+        ],
+        "recommendedRoles": ["frontend", "prototype_builder", "product"],
+        "topLanguages": [
+          {
+            "name": "TypeScript",
+            "share": 48
+          },
+          {
+            "name": "Prisma",
+            "share": 32
+          }
+        ],
+        "repositories": [
+          {
+            "name": "campus-link-demo-project-1",
+            "description": "캠퍼스 데모 흐름과 협업 문서를 함께 다루는 대표 레포지토리",
+            "repoUrl": "https://github.com/campus-link-demo/campus-link-demo-project-1",
+            "primaryLanguage": "TypeScript",
+            "stars": 12,
+            "topics": ["typescript", "campus-link", "prototype"],
+            "roleHint": "frontend",
+            "lastUpdatedAt": "2026-03-11T10:45:05.000Z"
+          }
+        ]
+      },
+      "error": null,
+      "requestedAt": "2026-03-11T10:45:00.000Z",
+      "startedAt": "2026-03-11T10:45:02.000Z",
+      "completedAt": "2026-03-11T10:45:05.000Z",
+      "updatedAt": "2026-03-11T10:45:05.000Z"
+    },
+    "providers": {
+      "githubConnection": {
+        "provider": "mock_github",
+        "label": "Mock GitHub Connector"
+      },
+      "githubAnalysis": {
+        "provider": "mock_analysis",
+        "label": "Mock GitHub Analyzer"
+      },
+      "aiSuggestion": {
+        "provider": "mock_suggestions",
+        "label": "Mock Suggestion Engine"
+      }
+    },
+    "dataSource": "mock"
+  }
+}
+```
+
+노트:
+
+- `status=running`인 중간 응답에서는 `result`가 `null`이다.
+- Phase 3 B 브랜치는 `job.status`만 보고 loading / success / failure UX를 구성한다.
+
+### `POST /api/ai/suggestions/jobs`
+
+Resume request 예시:
+
+```json
+{
+  "feature": "resume",
+  "target": "resume_summary",
+  "instruction": "캠퍼스 프로젝트 협업 경험을 강조해줘.",
+  "locale": "ko-KR",
+  "sourceText": "Frontend-focused collaborator for product demos and hackathon prototypes.",
+  "resume": {
+    "userId": "user_123",
+    "title": "Kim Jungle Resume",
+    "summary": "Frontend-focused collaborator for product demos and hackathon prototypes.",
+    "skills": ["Next.js", "TypeScript", "UI Prototyping"],
+    "education": "Krafton Jungle",
+    "experience": [],
+    "projects": [],
+    "links": [],
+    "visibility": "shared",
+    "createdAt": "2026-03-11T09:00:00.000Z",
+    "updatedAt": "2026-03-11T09:20:00.000Z"
+  },
+  "profileSnapshot": {
+    "headline": "Frontend builder for sprint-paced campus projects",
+    "intro": "짧은 주기의 데모 제작과 협업 문서화를 좋아합니다.",
+    "openToRoles": ["frontend", "product"],
+    "links": []
+  },
+  "onboardingKeywords": ["frontend", "hackathon"]
+}
+```
+
+Recruit-post request 예시:
+
+```json
+{
+  "feature": "recruit_post",
+  "target": "recruit_title",
+  "instruction": "짧고 팀 성격이 잘 드러나게 써줘.",
+  "locale": "ko-KR",
+  "sourceText": "2주 안에 온보딩부터 데모까지 완성할 집중형 프로젝트입니다.",
+  "draft": {
+    "category": "project",
+    "campus": "판교 캠퍼스",
+    "title": "",
+    "summary": "2주 안에 온보딩부터 데모까지 완성할 집중형 프로젝트입니다.",
+    "description": "",
+    "roles": ["Frontend", "Backend", "Product Designer"],
+    "techStack": ["Next.js", "TypeScript", "Tailwind CSS"],
+    "capacity": 3,
+    "stage": "MVP 제작 중",
+    "deadline": "2026-03-27",
+    "ownerRole": "PM / Frontend",
+    "meetingStyle": "오프라인 중심",
+    "schedule": "평일 저녁 3회 + 주말 스프린트 1회",
+    "goal": "Vercel 배포까지 마친 발표용 서비스 완성"
+  }
+}
+```
+
+Success:
+
+```json
+{
+  "success": true,
+  "data": {
+    "job": {
+      "id": "job_ai_123",
+      "userId": "user_123",
+      "kind": "ai_suggestion",
+      "status": "queued",
+      "provider": "mock_suggestions",
+      "request": {
+        "feature": "resume",
+        "target": "resume_summary",
+        "instruction": "캠퍼스 프로젝트 협업 경험을 강조해줘.",
+        "locale": "ko-KR",
+        "sourceText": "Frontend-focused collaborator for product demos and hackathon prototypes.",
+        "resume": {
+          "userId": "user_123",
+          "title": "Kim Jungle Resume",
+          "summary": "Frontend-focused collaborator for product demos and hackathon prototypes.",
+          "skills": ["Next.js", "TypeScript", "UI Prototyping"],
+          "education": "Krafton Jungle",
+          "experience": [],
+          "projects": [],
+          "links": [],
+          "visibility": "shared",
+          "createdAt": "2026-03-11T09:00:00.000Z",
+          "updatedAt": "2026-03-11T09:20:00.000Z"
+        },
+        "profileSnapshot": {
+          "headline": "Frontend builder for sprint-paced campus projects",
+          "intro": "짧은 주기의 데모 제작과 협업 문서화를 좋아합니다.",
+          "openToRoles": ["frontend", "product"],
+          "links": []
+        },
+        "onboardingKeywords": ["frontend", "hackathon"]
+      },
+      "result": null,
+      "error": null,
+      "requestedAt": "2026-03-11T10:50:00.000Z",
+      "startedAt": null,
+      "completedAt": null,
+      "updatedAt": "2026-03-11T10:50:00.000Z"
+    },
+    "providers": {
+      "githubConnection": {
+        "provider": "mock_github",
+        "label": "Mock GitHub Connector"
+      },
+      "githubAnalysis": {
+        "provider": "mock_analysis",
+        "label": "Mock GitHub Analyzer"
+      },
+      "aiSuggestion": {
+        "provider": "mock_suggestions",
+        "label": "Mock Suggestion Engine"
+      }
+    },
+    "dataSource": "mock"
+  }
+}
+```
+
+### `GET /api/ai/suggestions/jobs/{jobId}`
+
+Success:
+
+```json
+{
+  "success": true,
+  "data": {
+    "job": {
+      "id": "job_ai_123",
+      "userId": "user_123",
+      "kind": "ai_suggestion",
+      "status": "succeeded",
+      "provider": "mock_suggestions",
+      "request": {
+        "feature": "resume",
+        "target": "resume_summary",
+        "instruction": "캠퍼스 프로젝트 협업 경험을 강조해줘.",
+        "locale": "ko-KR",
+        "sourceText": "Frontend-focused collaborator for product demos and hackathon prototypes.",
+        "resume": {
+          "userId": "user_123",
+          "title": "Kim Jungle Resume",
+          "summary": "Frontend-focused collaborator for product demos and hackathon prototypes.",
+          "skills": ["Next.js", "TypeScript", "UI Prototyping"],
+          "education": "Krafton Jungle",
+          "experience": [],
+          "projects": [],
+          "links": [],
+          "visibility": "shared",
+          "createdAt": "2026-03-11T09:00:00.000Z",
+          "updatedAt": "2026-03-11T09:20:00.000Z"
+        },
+        "profileSnapshot": {
+          "headline": "Frontend builder for sprint-paced campus projects",
+          "intro": "짧은 주기의 데모 제작과 협업 문서화를 좋아합니다.",
+          "openToRoles": ["frontend", "product"],
+          "links": []
+        },
+        "onboardingKeywords": ["frontend", "hackathon"]
+      },
+      "result": {
+        "feature": "resume",
+        "target": "resume_summary",
+        "generatedAt": "2026-03-11T10:50:04.000Z",
+        "summaryNote": "2개의 제안을 현재 초안 기준으로 생성했습니다.",
+        "suggestions": [
+          {
+            "id": "resume-summary-profile",
+            "target": "resume_summary",
+            "label": "프로필 연동형 요약",
+            "rationale": "프로필 헤드라인과 온보딩 키워드를 요약 소개에 직접 반영했습니다.",
+            "action": "replace",
+            "confidence": "high",
+            "valueType": "text",
+            "value": "Frontend builder for sprint-paced campus projects. frontend, hackathon 주제에 강한 캠퍼스 프로젝트에서 빠르게 MVP를 정리하고 문서화하는 협업자입니다."
+          },
+          {
+            "id": "resume-summary-impact",
+            "target": "resume_summary",
+            "label": "기여 강조형 요약",
+            "rationale": "현재 초안의 톤을 유지하면서 실질적인 기여 포인트가 먼저 보이도록 바꿨습니다.",
+            "action": "replace",
+            "confidence": "medium",
+            "valueType": "text",
+            "value": "Frontend-focused collaborator for product demos and hackathon prototypes. 요구사항 정리부터 UI 구현, 발표용 polish까지 이어지는 end-to-end 기여를 강점으로 드러내 보세요."
+          }
+        ]
+      },
+      "error": null,
+      "requestedAt": "2026-03-11T10:50:00.000Z",
+      "startedAt": "2026-03-11T10:50:02.000Z",
+      "completedAt": "2026-03-11T10:50:04.000Z",
+      "updatedAt": "2026-03-11T10:50:04.000Z"
+    },
+    "providers": {
+      "githubConnection": {
+        "provider": "mock_github",
+        "label": "Mock GitHub Connector"
+      },
+      "githubAnalysis": {
+        "provider": "mock_analysis",
+        "label": "Mock GitHub Analyzer"
+      },
+      "aiSuggestion": {
+        "provider": "mock_suggestions",
+        "label": "Mock Suggestion Engine"
+      }
+    },
+    "dataSource": "mock"
+  }
+}
+```
+
+노트:
+
+- recruit-post flow도 같은 job envelope를 사용하고, `target`만 `recruit_title | recruit_summary | recruit_description`로 바뀐다.
+- Phase 3 C/D 브랜치는 `job.result.suggestions[]`의 `action`, `valueType`, `value`를 그대로 재사용해 preview/apply UX를 구성한다.
+
+## 8) 오픈 이슈
 
 - [ ] 실제 서비스 전환 시 인증 방식을 어떻게 추가할지
 - [ ] localStorage fallback 데이터를 서버 DB로 마이그레이션할 방식
 - [ ] 학교 인증, 신고, 관리자 기능을 어떤 API 단위로 확장할지
+- [ ] 실제 GitHub OAuth/App 연결과 `openai` provider key를 어떤 시점에 mock provider에서 교체할지

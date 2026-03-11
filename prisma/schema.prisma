@@ -100,6 +100,24 @@ enum AlertDigestFrequency {
   weekly
 }
 
+enum GitHubConnectionStatus {
+  not_connected
+  connected
+  error
+}
+
+enum AiJobKind {
+  github_analysis
+  ai_suggestion
+}
+
+enum AiJobStatus {
+  queued
+  running
+  succeeded
+  failed
+}
+
 enum ApplicationStatus {
   pending
   reviewed
@@ -123,6 +141,8 @@ model User {
   verification    Verification?
   inquiries       Inquiry[]
   alertPreference AlertPreference?
+  githubConnection GitHubConnection?
+  aiJobs          AiJob[]
   recruitPosts    RecruitPost[]
   applications    RecruitApplication[]
 }
@@ -227,6 +247,41 @@ model AlertPreference {
   createdAt            DateTime             @default(now())
   updatedAt            DateTime             @updatedAt
   user                 User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model GitHubConnection {
+  userId           String                 @id
+  username         String?
+  profileUrl       String?
+  provider         String                 @default("mock_github")
+  status           GitHubConnectionStatus @default(not_connected)
+  connectedAt      DateTime?
+  lastValidatedAt  DateTime?
+  lastAnalysisJobId String?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  user             User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AiJob {
+  id            String    @id @default(cuid())
+  userId        String
+  kind          AiJobKind
+  status        AiJobStatus @default(queued)
+  provider      String
+  request       Json
+  result        Json?
+  errorCode     String?
+  errorMessage  String?
+  requestedAt   DateTime  @default(now())
+  startedAt     DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, kind, createdAt])
+  @@index([status, updatedAt])
 }
 
 model RecruitPost {
