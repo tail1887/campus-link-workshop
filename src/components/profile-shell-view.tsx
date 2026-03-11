@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { ProfileShellViewModel } from "@/lib/profile-shell/adapter";
 import { VerificationStatusBadge } from "@/components/verification-status-badge";
@@ -12,10 +13,32 @@ export function ProfileShellView({ model }: ProfileShellViewProps) {
     <div className="shell space-y-8 pb-8 pt-6">
       <section className="panel-strong rounded-[2rem] px-6 py-8 sm:px-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-4">
-            <span className="eyebrow">{model.badge}</span>
-            <h1 className="section-title text-slate-950">{model.title}</h1>
-            <p className="section-subtitle">{model.subtitle}</p>
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center">
+            <Image
+              src={model.avatar.src}
+              alt={model.avatar.alt}
+              width={112}
+              height={112}
+              unoptimized
+              className="h-28 w-28 rounded-[1.8rem] border border-white/75 object-cover shadow-[0_18px_44px_rgba(15,23,42,0.14)]"
+            />
+            <div className="space-y-4">
+              <span className="eyebrow">{model.badge}</span>
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
+                  {model.identity.roleLabel}
+                </p>
+                <h1 className="section-title text-slate-950">{model.identity.name}</h1>
+              </div>
+              <p className="text-base font-medium text-slate-900">{model.title}</p>
+              <p className="section-subtitle">{model.subtitle}</p>
+              <p className="text-sm leading-7 text-[color:var(--muted)]">
+                {model.identity.headline}
+              </p>
+              <p className="text-sm font-semibold text-slate-700">
+                {model.identity.campus}
+              </p>
+            </div>
           </div>
           <div className="flex flex-col items-start gap-3 lg:items-end">
             {model.verificationSummary ? (
@@ -58,6 +81,39 @@ export function ProfileShellView({ model }: ProfileShellViewProps) {
       </section>
 
       <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+        {model.managementLinks.length > 0 ? (
+          <div className="panel rounded-[1.8rem] p-5 lg:col-span-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
+              Manage Activity
+            </p>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              {model.managementLinks.map((item) => (
+                <Link
+                  key={item.title}
+                  href={item.href}
+                  className="rounded-[1.4rem] border border-slate-200/80 bg-white/82 p-5 transition hover:border-slate-300 hover:bg-white"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-lg font-semibold text-slate-950">
+                        {item.title}
+                      </p>
+                      <p className="mt-2 text-sm leading-7 text-[color:var(--muted)]">
+                        {item.description}
+                      </p>
+                    </div>
+                    {item.value ? (
+                      <span className="rounded-full bg-[color:var(--accent-soft)] px-3 py-1 text-xs font-semibold text-[color:var(--accent-strong)]">
+                        {item.value}
+                      </span>
+                    ) : null}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
         <div className="panel rounded-[1.8rem] p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
             Shell Checklist
