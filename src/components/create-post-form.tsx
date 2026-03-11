@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useDeferredValue, useState, useTransition } from "react";
-import { PostCard } from "@/components/post-card";
 import {
   buildPostAiAssistViewModel,
   type BranchLocalPostAssistDraft,
@@ -428,8 +427,8 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
   };
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
-      <form onSubmit={submit} className="panel rounded-[1.8rem] p-5 sm:p-6">
+    <div className="grid gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(420px,0.95fr)]">
+      <form onSubmit={submit} className="panel rounded-[1.8rem] p-5 sm:p-6 lg:p-7">
         <div className="flex items-center justify-between gap-4">
           <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
@@ -453,7 +452,7 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
         </div>
 
         <div className="mt-5 grid gap-4">
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-2">
             <label className="space-y-2 text-sm font-semibold text-slate-800">
               모집 유형
               <select
@@ -549,7 +548,7 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
             />
           </label>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-2">
             <label className="space-y-2 text-sm font-semibold text-slate-800">
               모집 역할
               <input
@@ -590,7 +589,7 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
             </label>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 lg:grid-cols-3">
             <label className="space-y-2 text-sm font-semibold text-slate-800">
               모집 인원
               <input
@@ -632,7 +631,7 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
             </label>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-2">
             <label className="space-y-2 text-sm font-semibold text-slate-800">
               팀장 이름
               <input
@@ -673,7 +672,7 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
             </label>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-2">
             <label className="space-y-2 text-sm font-semibold text-slate-800">
               진행 방식
               <input
@@ -756,17 +755,17 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
       </form>
 
       <div className="space-y-4">
-        <div className="panel rounded-[1.8rem] p-5 sm:p-6">
+        <div className="panel rounded-[1.8rem] p-5 sm:p-6 lg:p-7">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
                 AI Assist
               </p>
               <h2 className="text-2xl font-semibold text-slate-950">
-                {assistModel.title}
+                모집글 AI 초안
               </h2>
               <p className="text-sm leading-7 text-[color:var(--muted)]">
-                {assistModel.subtitle}
+                제목, 요약, 상세 설명 초안을 현재 입력값 기준으로 바로 만들어 반영할 수 있습니다.
               </p>
             </div>
             <div className="flex flex-col gap-2 sm:items-end">
@@ -882,46 +881,6 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
               ))}
             </div>
           )}
-        </div>
-
-        <div className="panel rounded-[1.8rem] p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-            Live Preview
-          </p>
-          <h2 className="mt-2 text-2xl font-semibold text-slate-950">
-            카드 미리보기
-          </h2>
-          <p className="mt-3 text-sm leading-7 text-[color:var(--muted)]">
-            입력한 내용을 기준으로 실제 목록 카드가 어떻게 보일지 바로 확인할 수
-            있습니다.
-          </p>
-        </div>
-        <PostCard post={previewPost} />
-
-        <div className="panel rounded-[1.8rem] p-5 sm:p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-            AI Replacement Points
-          </p>
-          <div className="mt-4 grid gap-3">
-            {assistModel.replacementPoints.map((point) => (
-              <div
-                key={point.id}
-                className="rounded-[1.2rem] border border-slate-200/80 bg-white/82 px-4 py-4"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-semibold text-slate-950">
-                    {point.title}
-                  </p>
-                  <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-600">
-                    {point.target}
-                  </span>
-                </div>
-                <p className="mt-2 text-sm leading-7 text-[color:var(--muted)]">
-                  {point.description}
-                </p>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     </div>
