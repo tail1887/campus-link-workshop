@@ -1,31 +1,35 @@
 "use client";
 
 import Link from "next/link";
-import { useDeferredValue, useState, useTransition } from "react";
-import { normalizeText } from "@/lib/identity";
+import { useDeferredValue, useEffect, useRef, useState, useTransition } from "react";
 import {
-  buildResumeCompleteness,
-  normalizeExternalLinks,
-  normalizeResumeExperience,
-  normalizeResumeProjects,
-  normalizeStringList,
-} from "@/lib/profile";
+  applyAiSuggestionToDraft,
+  buildDraftFromResume,
+  buildPayloadFromDraft,
+  buildPreviewResume,
+  buildResumeAiRunContext,
+  formatExperienceLabel,
+  formatProjectLabel,
+  getResumeAiCurrentSource,
+  parseExperienceText,
+  parseLinksText,
+  parseProjectsText,
+  resumeAiTargetOptions,
+  resolveSelectedIndex,
+  type ResumeAiCurrentSource,
+  type ResumeAiRunContext,
+} from "@/lib/resume-ai-assist";
+import { buildResumeCompleteness, normalizeExternalLinks } from "@/lib/profile";
 import type { ResumeWorkspaceViewModel } from "@/lib/resume-workspace/adapter";
 import type { ApiError, ApiSuccess } from "@/types/identity";
 import type {
-  ExternalLink,
-  ExternalLinkType,
-  Resume,
-  ResumeExperience,
-  ResumePayload,
-  ResumeProject,
-  ResumeVisibility,
-  UpdateResumeRequest,
-} from "@/types/profile";
-import {
-  externalLinkTypeValues,
-  resumeVisibilityValues,
-} from "@/types/profile";
+  AiSuggestion,
+  AiSuggestionJob,
+  AiSuggestionJobPayload,
+  ResumeAiSuggestionTarget,
+} from "@/types/ai";
+import type { ResumePayload, ResumeVisibility } from "@/types/profile";
+import { resumeVisibilityValues } from "@/types/profile";
 
 type ResumeWorkspaceProps = {
   model: ResumeWorkspaceViewModel;
@@ -41,17 +45,6 @@ type ResumeWorkspaceReadyModel = Extract<
   { status: "ready" }
 >;
 
-type ResumeDraft = {
-  title: string;
-  summary: string;
-  skillsText: string;
-  education: string;
-  experienceText: string;
-  projectsText: string;
-  linksText: string;
-  visibility: ResumeVisibility;
-};
-
 const dateFormatter = new Intl.DateTimeFormat("ko-KR", {
   month: "short",
   day: "numeric",
@@ -59,138 +52,28 @@ const dateFormatter = new Intl.DateTimeFormat("ko-KR", {
   minute: "2-digit",
 });
 
-function serializeExperience(values: ResumeExperience[]) {
-  return values
-    .map((item) =>
-      [
-        item.organization,
-        item.role,
-        item.startDate ?? "",
-        item.endDate ?? "",
-        item.description,
-      ].join(" | "),
-    )
-    .join("\n");
+function wait(ms: number) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
-function parseExperienceText(value: string): ResumeExperience[] {
-  return value
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const [organization = "", role = "", startDate = "", endDate = "", ...rest] =
-        line.split("|").map((item) => item.trim());
-
-      return {
-        organization,
-        role,
-        startDate: startDate || null,
-        endDate: endDate || null,
-        description: rest.join(" | "),
-      };
-    });
+async function readApiResult<T>(response: Response) {
+  return (await response.json().catch(() => null)) as
+    | ApiSuccess<T>
+    | ApiError
+    | null;
 }
 
-function serializeProjects(values: ResumeProject[]) {
-  return values
-    .map((item) =>
-      [
-        item.title,
-        item.description,
-        item.techStack.join(", "),
-        item.linkUrl ?? "",
-      ].join(" | "),
-    )
-    .join("\n");
-}
+function getApiErrorMessage(
+  result: ApiSuccess<unknown> | ApiError | null,
+  fallback: string,
+) {
+  if (result && !result.success) {
+    return result.error.message;
+  }
 
-function parseProjectsText(value: string): ResumeProject[] {
-  return value
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const [title = "", description = "", techStack = "", linkUrl = ""] = line
-        .split("|")
-        .map((item) => item.trim());
-
-      return {
-        title,
-        description,
-        techStack: techStack.split(","),
-        linkUrl: linkUrl || null,
-      };
-    });
-}
-
-function serializeLinks(values: ExternalLink[]) {
-  return values
-    .map((item) => [item.label, item.type, item.url].join(" | "))
-    .join("\n");
-}
-
-function parseLinksText(value: string): ExternalLink[] {
-  return value
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const [label = "", type = "other", url = ""] = line
-        .split("|")
-        .map((item) => item.trim());
-      const resolvedType = externalLinkTypeValues.includes(type as ExternalLinkType)
-        ? (type as ExternalLinkType)
-        : "other";
-
-      return {
-        label,
-        type: resolvedType,
-        url,
-      };
-    });
-}
-
-function buildDraftFromResume(resume: Resume): ResumeDraft {
-  return {
-    title: resume.title,
-    summary: resume.summary,
-    skillsText: resume.skills.join(", "),
-    education: resume.education,
-    experienceText: serializeExperience(resume.experience),
-    projectsText: serializeProjects(resume.projects),
-    linksText: serializeLinks(resume.links),
-    visibility: resume.visibility,
-  };
-}
-
-function buildPayloadFromDraft(draft: ResumeDraft): UpdateResumeRequest {
-  return {
-    title: normalizeText(draft.title),
-    summary: normalizeText(draft.summary),
-    skills: normalizeStringList(draft.skillsText.split(",")),
-    education: normalizeText(draft.education),
-    experience: normalizeResumeExperience(parseExperienceText(draft.experienceText)),
-    projects: normalizeResumeProjects(parseProjectsText(draft.projectsText)),
-    links: normalizeExternalLinks(parseLinksText(draft.linksText)),
-    visibility: draft.visibility,
-  };
-}
-
-function buildPreviewResume(base: Resume, draft: ResumeDraft): Resume {
-  const payload = buildPayloadFromDraft(draft);
-
-  return {
-    ...base,
-    title: payload.title ?? base.title,
-    summary: payload.summary ?? base.summary,
-    skills: payload.skills ?? base.skills,
-    education: payload.education ?? base.education,
-    experience: payload.experience ?? base.experience,
-    projects: payload.projects ?? base.projects,
-    links: payload.links ?? base.links,
-    visibility: payload.visibility ?? base.visibility,
-  };
+  return fallback;
 }
 
 function formatResumeTimestamp(value: string) {
@@ -199,6 +82,98 @@ function formatResumeTimestamp(value: string) {
 
 function getVisibilityLabel(value: ResumeVisibility) {
   return value === "shared" ? "공개" : "비공개";
+}
+
+function getAiTargetLabel(target: AiSuggestion["target"]) {
+  return (
+    resumeAiTargetOptions.find((option) => option.target === target)?.label ??
+    target
+  );
+}
+
+function getAiSuggestionConfidenceLabel(confidence: AiSuggestion["confidence"]) {
+  switch (confidence) {
+    case "high":
+      return "신뢰 높음";
+    case "medium":
+      return "신뢰 보통";
+    default:
+      return "신뢰 낮음";
+  }
+}
+
+function getAiJobStatusLabel(status: AiSuggestionJob["status"]) {
+  switch (status) {
+    case "queued":
+      return "요청 접수";
+    case "running":
+      return "생성 중";
+    case "succeeded":
+      return "제안 준비";
+    case "failed":
+      return "재시도 필요";
+    default:
+      return status;
+  }
+}
+
+function getAiJobStatusTone(status: AiSuggestionJob["status"]) {
+  switch (status) {
+    case "succeeded":
+      return "bg-[color:var(--teal-soft)] text-[color:var(--teal)]";
+    case "failed":
+      return "bg-rose-100 text-rose-700";
+    case "running":
+      return "bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]";
+    default:
+      return "bg-slate-100 text-slate-600";
+  }
+}
+
+function getAiConfidenceTone(confidence: AiSuggestion["confidence"]) {
+  switch (confidence) {
+    case "high":
+      return "bg-[color:var(--teal-soft)] text-[color:var(--teal)]";
+    case "medium":
+      return "bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]";
+    default:
+      return "bg-slate-100 text-slate-600";
+  }
+}
+
+function canApplySuggestion(suggestion: AiSuggestion) {
+  return suggestion.target !== "resume_full_review";
+}
+
+function SourcePreview({
+  source,
+  emptyText,
+}: {
+  source: ResumeAiCurrentSource;
+  emptyText: string;
+}) {
+  if (source.valueType === "string_list") {
+    return source.list.length > 0 ? (
+      <div className="flex flex-wrap gap-2">
+        {source.list.map((item) => (
+          <span
+            key={item}
+            className="rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-700"
+          >
+            {item}
+          </span>
+        ))}
+      </div>
+    ) : (
+      <p className="text-sm leading-7 text-[color:var(--muted)]">{emptyText}</p>
+    );
+  }
+
+  return (
+    <p className="whitespace-pre-wrap text-sm leading-7 text-[color:var(--muted)]">
+      {source.text || emptyText}
+    </p>
+  );
 }
 
 export function ResumeWorkspace({ model }: ResumeWorkspaceProps) {
@@ -221,7 +196,7 @@ function ResumeWorkspaceGuest({ model }: { model: ResumeWorkspaceGuestModel }) {
           </div>
           <div className="flex flex-wrap gap-3">
             <Link href="/login?next=%2Fresume" className="button-primary">
-              로그인하고 이력서 열기
+              로그인하고 AI 이력서 열기
             </Link>
             <Link href="/profile" className="button-ghost">
               프로필 셸 보기
@@ -292,7 +267,7 @@ function ResumeWorkspaceGuest({ model }: { model: ResumeWorkspaceGuestModel }) {
 
           <div className="panel rounded-[1.8rem] p-5 sm:p-6">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-              AI Handoff
+              AI Assist Scope
             </p>
             <div className="mt-4 grid gap-3">
               {model.replacementPoints.map((point) => (
@@ -317,21 +292,80 @@ function ResumeWorkspaceGuest({ model }: { model: ResumeWorkspaceGuestModel }) {
 }
 
 function ResumeWorkspaceReady({ model }: { model: ResumeWorkspaceReadyModel }) {
-
   const [savedResume, setSavedResume] = useState(model.resume);
   const [savedCompleteness, setSavedCompleteness] = useState(model.completeness);
   const [draft, setDraft] = useState(() => buildDraftFromResume(model.resume));
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
-  const [isPending, startTransition] = useTransition();
+  const [workspaceError, setWorkspaceError] = useState("");
+  const [workspaceNotice, setWorkspaceNotice] = useState("");
+  const [aiError, setAiError] = useState("");
+  const [aiNotice, setAiNotice] = useState("");
+  const [aiTarget, setAiTarget] =
+    useState<ResumeAiSuggestionTarget>("resume_summary");
+  const [aiInstruction, setAiInstruction] = useState("");
+  const [selectedExperienceIndex, setSelectedExperienceIndex] = useState(0);
+  const [selectedProjectIndex, setSelectedProjectIndex] = useState(0);
+  const [aiJob, setAiJob] = useState<AiSuggestionJob | null>(null);
+  const [lastAiRun, setLastAiRun] = useState<ResumeAiRunContext | null>(null);
+  const [isAiBusy, setIsAiBusy] = useState(false);
+  const [isSavePending, startSaveTransition] = useTransition();
+  const aiRunIdRef = useRef(0);
   const deferredDraft = useDeferredValue(draft);
+
+  useEffect(() => {
+    return () => {
+      aiRunIdRef.current += 1;
+    };
+  }, []);
+
   const previewResume = buildPreviewResume(savedResume, deferredDraft);
+  const liveResume = buildPreviewResume(savedResume, draft);
   const previewCompleteness = buildResumeCompleteness(previewResume);
   const savedSnapshot = JSON.stringify(
     buildPayloadFromDraft(buildDraftFromResume(savedResume)),
   );
   const draftSnapshot = JSON.stringify(buildPayloadFromDraft(draft));
   const isDirty = savedSnapshot !== draftSnapshot;
+
+  const parsedLinks = parseLinksText(draft.linksText);
+  const parsedExperience = parseExperienceText(draft.experienceText);
+  const parsedProjects = parseProjectsText(draft.projectsText);
+  const resolvedExperienceIndex = resolveSelectedIndex(
+    parsedExperience.length,
+    selectedExperienceIndex,
+  );
+  const resolvedProjectIndex = resolveSelectedIndex(
+    parsedProjects.length,
+    selectedProjectIndex,
+  );
+  const aiTargetOption =
+    resumeAiTargetOptions.find((option) => option.target === aiTarget) ??
+    resumeAiTargetOptions[0];
+  const currentAiSource = getResumeAiCurrentSource({
+    target: aiTarget,
+    draft,
+    parsedExperience,
+    parsedProjects,
+    selectedExperienceIndex: resolvedExperienceIndex,
+    selectedProjectIndex: resolvedProjectIndex,
+  });
+  const resultSource = getResumeAiCurrentSource({
+    target: lastAiRun?.target ?? aiTarget,
+    draft,
+    parsedExperience,
+    parsedProjects,
+    selectedExperienceIndex: lastAiRun?.experienceIndex ?? resolvedExperienceIndex,
+    selectedProjectIndex: lastAiRun?.projectIndex ?? resolvedProjectIndex,
+  });
+  const aiSuggestions =
+    aiJob?.status === "succeeded" ? aiJob.result?.suggestions ?? [] : [];
+  const selectedExperience =
+    resolvedExperienceIndex === null ? null : parsedExperience[resolvedExperienceIndex];
+  const selectedProject =
+    resolvedProjectIndex === null ? null : parsedProjects[resolvedProjectIndex];
+  const canRetryAi =
+    Boolean(lastAiRun) &&
+    !isAiBusy &&
+    (Boolean(aiError) || aiJob?.status === "failed");
 
   const mergeProfileLinks = () => {
     const nextLinks = normalizeExternalLinks([
@@ -341,16 +375,18 @@ function ResumeWorkspaceReady({ model }: { model: ResumeWorkspaceReadyModel }) {
 
     setDraft((current) => ({
       ...current,
-      linksText: serializeLinks(nextLinks),
+      linksText: nextLinks
+        .map((item) => [item.label, item.type, item.url].join(" | "))
+        .join("\n"),
     }));
-    setNotice("프로필 링크를 이력서 링크 편집기에 가져왔습니다.");
-    setError("");
+    setWorkspaceNotice("프로필 링크를 이력서 링크 편집기에 가져왔습니다.");
+    setWorkspaceError("");
   };
 
   const applyProfileHeadline = () => {
     if (!model.profile.headline.trim()) {
-      setNotice("프로필 헤드라인이 아직 없어 바로 가져올 초안이 없습니다.");
-      setError("");
+      setWorkspaceNotice("프로필 헤드라인이 아직 없어 바로 가져올 초안이 없습니다.");
+      setWorkspaceError("");
       return;
     }
 
@@ -360,15 +396,15 @@ function ResumeWorkspaceReady({ model }: { model: ResumeWorkspaceReadyModel }) {
         ? `${model.profile.headline}\n\n${current.summary}`
         : model.profile.headline,
     }));
-    setNotice("프로필 헤드라인을 이력서 요약 초안으로 가져왔습니다.");
-    setError("");
+    setWorkspaceNotice("프로필 헤드라인을 이력서 요약 초안으로 가져왔습니다.");
+    setWorkspaceError("");
   };
 
   const handleSave = () => {
-    setError("");
-    setNotice("");
+    setWorkspaceError("");
+    setWorkspaceNotice("");
 
-    startTransition(async () => {
+    startSaveTransition(async () => {
       const response = await fetch("/api/resume", {
         method: "PUT",
         headers: {
@@ -377,13 +413,11 @@ function ResumeWorkspaceReady({ model }: { model: ResumeWorkspaceReadyModel }) {
         body: JSON.stringify(buildPayloadFromDraft(draft)),
       });
 
-      const result = (await response.json()) as
-        | ApiSuccess<ResumePayload>
-        | ApiError;
+      const result = await readApiResult<ResumePayload>(response);
 
-      if (!response.ok || !result.success) {
-        setError(
-          "error" in result ? result.error.message : "이력서 저장에 실패했습니다.",
+      if (!response.ok || !result?.success) {
+        setWorkspaceError(
+          getApiErrorMessage(result, "이력서 저장에 실패했습니다."),
         );
         return;
       }
@@ -391,13 +425,160 @@ function ResumeWorkspaceReady({ model }: { model: ResumeWorkspaceReadyModel }) {
       setSavedResume(result.data.resume);
       setSavedCompleteness(result.data.completeness);
       setDraft(buildDraftFromResume(result.data.resume));
-      setNotice("이력서를 저장했습니다. completeness와 draft가 다시 동기화되었습니다.");
+      setWorkspaceNotice(
+        "이력서를 저장했습니다. completeness와 draft가 다시 동기화되었습니다.",
+      );
     });
   };
 
-  const parsedLinks = parseLinksText(draft.linksText);
-  const parsedExperience = parseExperienceText(draft.experienceText);
-  const parsedProjects = parseProjectsText(draft.projectsText);
+  const runAiSuggestions = async (runContext: ResumeAiRunContext) => {
+    const runId = aiRunIdRef.current + 1;
+    aiRunIdRef.current = runId;
+    setIsAiBusy(true);
+    setAiError("");
+    setAiNotice("");
+    setAiJob(null);
+    setLastAiRun(runContext);
+
+    try {
+      const createResponse = await fetch("/api/ai/suggestions/jobs", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(runContext.request),
+      });
+
+      const createResult = await readApiResult<AiSuggestionJobPayload>(
+        createResponse,
+      );
+
+      if (!createResponse.ok || !createResult?.success) {
+        throw new Error(
+          getApiErrorMessage(createResult, "AI suggestion 요청을 시작하지 못했습니다."),
+        );
+      }
+
+      if (runId !== aiRunIdRef.current) {
+        return;
+      }
+
+      let nextJob = createResult.data.job;
+      setAiJob(nextJob);
+
+      while (
+        runId === aiRunIdRef.current &&
+        (nextJob.status === "queued" || nextJob.status === "running")
+      ) {
+        await wait(900);
+
+        const pollResponse = await fetch(`/api/ai/suggestions/jobs/${nextJob.id}`, {
+          cache: "no-store",
+        });
+        const pollResult = await readApiResult<AiSuggestionJobPayload>(pollResponse);
+
+        if (!pollResponse.ok || !pollResult?.success) {
+          throw new Error(
+            getApiErrorMessage(
+              pollResult,
+              "AI suggestion 상태를 다시 확인하지 못했습니다.",
+            ),
+          );
+        }
+
+        nextJob = pollResult.data.job;
+
+        if (runId !== aiRunIdRef.current) {
+          return;
+        }
+
+        setAiJob(nextJob);
+      }
+
+      if (runId !== aiRunIdRef.current) {
+        return;
+      }
+
+      if (nextJob.status === "failed") {
+        setAiError(nextJob.error?.message ?? "AI suggestion 생성에 실패했습니다.");
+        return;
+      }
+
+      setAiNotice(
+        "AI 제안이 준비되었습니다. 미리보기를 확인한 뒤 원하는 제안을 초안에 반영하세요.",
+      );
+    } catch (error) {
+      if (runId !== aiRunIdRef.current) {
+        return;
+      }
+
+      setAiError(
+        error instanceof Error
+          ? error.message
+          : "AI suggestion을 불러오지 못했습니다.",
+      );
+    } finally {
+      if (runId === aiRunIdRef.current) {
+        setIsAiBusy(false);
+      }
+    }
+  };
+
+  const handleGenerateAi = () => {
+    const nextRun = buildResumeAiRunContext({
+      target: aiTarget,
+      instruction: aiInstruction,
+      locale:
+        typeof navigator === "undefined" ? "ko-KR" : navigator.language ?? "ko-KR",
+      resume: liveResume,
+      profile: model.profile,
+      onboarding: model.onboarding,
+      parsedExperience,
+      parsedProjects,
+      selectedExperienceIndex: resolvedExperienceIndex,
+      selectedProjectIndex: resolvedProjectIndex,
+    });
+
+    if (!nextRun.success) {
+      setAiError(nextRun.message);
+      setAiNotice("");
+      return;
+    }
+
+    void runAiSuggestions(nextRun.context);
+  };
+
+  const handleRetryAi = () => {
+    if (!lastAiRun) {
+      setAiError("다시 실행할 최근 AI 요청이 없습니다.");
+      return;
+    }
+
+    void runAiSuggestions(lastAiRun);
+  };
+
+  const handleApplySuggestion = (suggestion: AiSuggestion) => {
+    const applied = applyAiSuggestionToDraft({
+      draft,
+      parsedExperience,
+      parsedProjects,
+      suggestion,
+      runContext: lastAiRun,
+    });
+
+    if (!applied.success) {
+      setAiError(applied.message);
+      return;
+    }
+
+    setDraft(applied.draft);
+    setAiNotice(applied.message);
+    setWorkspaceNotice(
+      "AI 제안은 현재 draft에만 반영되었습니다. 저장 버튼을 눌러 이력서에 확정하세요.",
+    );
+    setAiError("");
+    setWorkspaceError("");
+  };
 
   return (
     <div className="shell space-y-8 pb-8 pt-6">
@@ -415,10 +596,10 @@ function ResumeWorkspaceReady({ model }: { model: ResumeWorkspaceReadyModel }) {
             <button
               type="button"
               onClick={handleSave}
-              disabled={isPending}
+              disabled={isSavePending}
               className="button-primary disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {isPending ? "저장 중..." : isDirty ? "변경사항 저장" : "저장 완료"}
+              {isSavePending ? "저장 중..." : isDirty ? "변경사항 저장" : "저장 완료"}
             </button>
           </div>
         </div>
@@ -428,7 +609,10 @@ function ResumeWorkspaceReady({ model }: { model: ResumeWorkspaceReadyModel }) {
             ["Preview Score", `${previewCompleteness.score}%`],
             ["Saved Score", `${savedCompleteness.score}%`],
             ["Visibility", getVisibilityLabel(previewResume.visibility)],
-            ["Profile Link", model.profile.headline.trim() ? "연결됨" : "헤드라인 필요"],
+            [
+              "AI Target",
+              lastAiRun ? getAiTargetLabel(lastAiRun.target) : getAiTargetLabel(aiTarget),
+            ],
           ].map(([label, value]) => (
             <div
               key={label}
@@ -555,14 +739,14 @@ function ResumeWorkspaceReady({ model }: { model: ResumeWorkspaceReadyModel }) {
               </label>
             </div>
 
-            {error ? (
+            {workspaceError ? (
               <div className="mt-4 rounded-[1.25rem] bg-rose-50 px-4 py-3 text-sm font-medium text-rose-600">
-                {error}
+                {workspaceError}
               </div>
             ) : null}
-            {notice ? (
+            {workspaceNotice ? (
               <div className="mt-4 rounded-[1.25rem] bg-sky-50 px-4 py-3 text-sm font-medium text-sky-700">
-                {notice}
+                {workspaceNotice}
               </div>
             ) : null}
           </div>
@@ -631,12 +815,17 @@ function ResumeWorkspaceReady({ model }: { model: ResumeWorkspaceReadyModel }) {
             </div>
           </div>
         </div>
-
         <div className="space-y-6">
           <div className="panel rounded-[1.8rem] p-5 sm:p-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-              Profile Context
-            </p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
+                AI Resume Assist
+              </p>
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-600">
+                /api/ai/suggestions/jobs
+              </span>
+            </div>
+
             <div className="mt-4 grid gap-3">
               <div className="rounded-[1.2rem] border border-slate-200/80 bg-white/82 px-4 py-4 text-sm leading-7 text-[color:var(--muted)]">
                 <strong className="text-slate-950">{model.user.displayName}</strong>
@@ -660,6 +849,7 @@ function ResumeWorkspaceReady({ model }: { model: ResumeWorkspaceReadyModel }) {
                   : "미입력"}
               </div>
             </div>
+
             <div className="mt-4 flex flex-col gap-3">
               <button
                 type="button"
@@ -676,6 +866,305 @@ function ResumeWorkspaceReady({ model }: { model: ResumeWorkspaceReadyModel }) {
                 프로필 링크를 이력서에 합치기
               </button>
             </div>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              {resumeAiTargetOptions.map((option) => {
+                const active = option.target === aiTarget;
+
+                return (
+                  <button
+                    key={option.target}
+                    type="button"
+                    onClick={() => {
+                      setAiTarget(option.target);
+                      setAiError("");
+                    }}
+                    className={`rounded-[1.2rem] border px-4 py-4 text-left transition ${
+                      active
+                        ? "border-[color:var(--accent)] bg-[color:var(--accent-soft)]/60"
+                        : "border-slate-200/80 bg-white/82"
+                    }`}
+                  >
+                    <p className="text-sm font-semibold text-slate-950">
+                      {option.label}
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">
+                      {option.description}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+
+            {aiTarget === "resume_experience" ? (
+              <div className="mt-5 space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                  경험 항목 선택
+                </p>
+                <div className="grid gap-2">
+                  {parsedExperience.length > 0 ? (
+                    parsedExperience.map((item, index) => {
+                      const active = resolvedExperienceIndex === index;
+
+                      return (
+                        <button
+                          key={`${item.organization}-${item.role}-${index}`}
+                          type="button"
+                          onClick={() => setSelectedExperienceIndex(index)}
+                          className={`rounded-[1.1rem] border px-4 py-3 text-left ${
+                            active
+                              ? "border-[color:var(--teal)] bg-[color:var(--teal-soft)]"
+                              : "border-slate-200/80 bg-white/82"
+                          }`}
+                        >
+                          <p className="text-sm font-semibold text-slate-950">
+                            {formatExperienceLabel(item, index)}
+                          </p>
+                          <p className="mt-1 text-sm leading-6 text-[color:var(--muted)]">
+                            {item.description || "설명이 아직 비어 있습니다."}
+                          </p>
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <div className="rounded-[1.1rem] border border-dashed border-slate-300 bg-white/72 px-4 py-4 text-sm leading-7 text-[color:var(--muted)]">
+                      경험 항목을 한 줄 이상 입력하면 해당 항목을 선택해 AI 문장 제안을 만들 수 있습니다.
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : null}
+
+            {aiTarget === "resume_project" ? (
+              <div className="mt-5 space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                  프로젝트 항목 선택
+                </p>
+                <div className="grid gap-2">
+                  {parsedProjects.length > 0 ? (
+                    parsedProjects.map((item, index) => {
+                      const active = resolvedProjectIndex === index;
+
+                      return (
+                        <button
+                          key={`${item.title}-${index}`}
+                          type="button"
+                          onClick={() => setSelectedProjectIndex(index)}
+                          className={`rounded-[1.1rem] border px-4 py-3 text-left ${
+                            active
+                              ? "border-[color:var(--teal)] bg-[color:var(--teal-soft)]"
+                              : "border-slate-200/80 bg-white/82"
+                          }`}
+                        >
+                          <p className="text-sm font-semibold text-slate-950">
+                            {formatProjectLabel(item, index)}
+                          </p>
+                          <p className="mt-1 text-sm leading-6 text-[color:var(--muted)]">
+                            {item.description || "설명이 아직 비어 있습니다."}
+                          </p>
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <div className="rounded-[1.1rem] border border-dashed border-slate-300 bg-white/72 px-4 py-4 text-sm leading-7 text-[color:var(--muted)]">
+                      프로젝트 항목을 한 줄 이상 입력하면 해당 항목을 선택해 AI 스토리 제안을 만들 수 있습니다.
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : null}
+
+            <div className="mt-5 rounded-[1.2rem] border border-slate-200/80 bg-white/82 px-4 py-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-slate-950">현재 생성 기준</p>
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-600">
+                  {currentAiSource.label}
+                </span>
+              </div>
+              <div className="mt-3">
+                <SourcePreview
+                  source={currentAiSource}
+                  emptyText="현재 초안이 비어 있어 AI가 프로필/온보딩 맥락을 우선 참고합니다."
+                />
+              </div>
+            </div>
+
+            <label className="mt-4 block space-y-2 text-sm font-semibold text-slate-800">
+              AI 요청 가이드
+              <textarea
+                value={aiInstruction}
+                onChange={(event) => setAiInstruction(event.target.value)}
+                className="field textarea"
+                placeholder={aiTargetOption.instructionPlaceholder}
+              />
+            </label>
+
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={handleGenerateAi}
+                disabled={isAiBusy}
+                className="button-primary flex-1 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {isAiBusy ? "AI 생성 중..." : `${aiTargetOption.label} 제안 만들기`}
+              </button>
+              <button
+                type="button"
+                onClick={handleRetryAi}
+                disabled={!canRetryAi}
+                className="button-ghost flex-1 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                마지막 요청 다시 실행
+              </button>
+            </div>
+          </div>
+
+          <div className="panel rounded-[1.8rem] p-5 sm:p-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
+                AI Suggestions
+              </p>
+              {aiJob ? (
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-semibold ${getAiJobStatusTone(aiJob.status)}`}
+                >
+                  {getAiJobStatusLabel(aiJob.status)}
+                </span>
+              ) : null}
+            </div>
+
+            {lastAiRun ? (
+              <div className="mt-4 rounded-[1.2rem] border border-slate-200/80 bg-white/82 px-4 py-4 text-sm leading-7 text-[color:var(--muted)]">
+                마지막 요청 대상:{" "}
+                <strong className="text-slate-950">
+                  {getAiTargetLabel(lastAiRun.target)}
+                </strong>
+                {` · ${lastAiRun.sourceLabel}`}
+                {aiJob ? ` · provider ${aiJob.provider}` : ""}
+              </div>
+            ) : null}
+
+            {aiError ? (
+              <div className="mt-4 rounded-[1.2rem] bg-rose-50 px-4 py-3 text-sm font-medium text-rose-600">
+                {aiError}
+              </div>
+            ) : null}
+            {aiNotice ? (
+              <div className="mt-4 rounded-[1.2rem] bg-sky-50 px-4 py-3 text-sm font-medium text-sky-700">
+                {aiNotice}
+              </div>
+            ) : null}
+
+            {!aiJob && !aiError ? (
+              <div className="mt-4 rounded-[1.2rem] border border-dashed border-slate-300 bg-white/72 px-4 py-4 text-sm leading-7 text-[color:var(--muted)]">
+                오른쪽 컨텍스트에서 target과 항목을 고른 뒤 AI suggestion job을 시작하면,
+                Phase 3 job status와 suggestion preview를 여기에서 그대로 확인할 수 있습니다.
+              </div>
+            ) : null}
+
+            {aiJob?.status === "queued" || aiJob?.status === "running" ? (
+              <div className="mt-4 rounded-[1.2rem] border border-slate-200/80 bg-white/82 px-4 py-4">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-slate-950">
+                    {getAiJobStatusLabel(aiJob.status)}
+                  </p>
+                  <p className="text-xs font-medium uppercase tracking-[0.12em] text-[color:var(--muted)]">
+                    {formatResumeTimestamp(aiJob.updatedAt)}
+                  </p>
+                </div>
+                <p className="mt-2 text-sm leading-7 text-[color:var(--muted)]">
+                  {aiJob.status === "queued"
+                    ? "job이 접수되었습니다. 다음 polling 응답에서 running 또는 succeeded 상태로 전이됩니다."
+                    : "provider가 현재 초안을 읽고 suggestion을 만들고 있습니다."}
+                </p>
+                <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200/80">
+                  <div className="h-full w-2/3 animate-pulse rounded-full bg-[linear-gradient(135deg,var(--accent),var(--teal))]" />
+                </div>
+              </div>
+            ) : null}
+
+            {aiSuggestions.length > 0 ? (
+              <div className="mt-4 grid gap-4">
+                {aiSuggestions.map((suggestion) => (
+                  <div
+                    key={suggestion.id}
+                    className="rounded-[1.25rem] border border-slate-200/80 bg-white/82 px-4 py-4"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-950">
+                          {suggestion.label}
+                        </p>
+                        <p className="mt-1 text-xs font-medium uppercase tracking-[0.12em] text-[color:var(--muted)]">
+                          {suggestion.action} · {getAiTargetLabel(suggestion.target)}
+                        </p>
+                      </div>
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-semibold ${getAiConfidenceTone(suggestion.confidence)}`}
+                      >
+                        {getAiSuggestionConfidenceLabel(suggestion.confidence)}
+                      </span>
+                    </div>
+
+                    <p className="mt-3 text-sm leading-7 text-[color:var(--muted)]">
+                      {suggestion.rationale}
+                    </p>
+
+                    <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                      <div className="rounded-[1rem] bg-slate-50 px-4 py-4">
+                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                          Current Draft
+                        </p>
+                        <div className="mt-3">
+                          <SourcePreview
+                            source={resultSource}
+                            emptyText="아직 해당 섹션 초안이 비어 있습니다."
+                          />
+                        </div>
+                      </div>
+                      <div className="rounded-[1rem] bg-[color:var(--accent-soft)]/45 px-4 py-4">
+                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--accent-strong)]">
+                          Suggested Update
+                        </p>
+                        <div className="mt-3">
+                          <SourcePreview
+                            source={{
+                              label: suggestion.label,
+                              valueType: suggestion.valueType,
+                              text:
+                                suggestion.valueType === "text" ? suggestion.value : "",
+                              list:
+                                suggestion.valueType === "string_list"
+                                  ? suggestion.value
+                                  : [],
+                            }}
+                            emptyText="제안 값이 비어 있습니다."
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-3">
+                      <button
+                        type="button"
+                        onClick={() => handleApplySuggestion(suggestion)}
+                        disabled={!canApplySuggestion(suggestion)}
+                        className="button-secondary disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {canApplySuggestion(suggestion)
+                          ? "초안에 반영"
+                          : "검토용 제안"}
+                      </button>
+                      {!canApplySuggestion(suggestion) ? (
+                        <span className="rounded-full bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-600">
+                          full review는 직접 수정 가이드로만 사용합니다.
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </div>
 
           <div className="panel rounded-[1.8rem] p-5 sm:p-6">
@@ -718,32 +1207,6 @@ function ResumeWorkspaceReady({ model }: { model: ResumeWorkspaceReadyModel }) {
 
           <div className="panel rounded-[1.8rem] p-5 sm:p-6">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-              AI Replacement Points
-            </p>
-            <div className="mt-4 grid gap-3">
-              {model.replacementPoints.map((point) => (
-                <div
-                  key={point.id}
-                  className="rounded-[1.2rem] border border-slate-200/80 bg-white/82 px-4 py-4"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-semibold text-slate-950">
-                      {point.title}
-                    </p>
-                    <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-600">
-                      {point.target}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-sm leading-7 text-[color:var(--muted)]">
-                    {point.description}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="panel rounded-[1.8rem] p-5 sm:p-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
               Workspace Notes
             </p>
             <div className="mt-4 grid gap-3">
@@ -755,6 +1218,32 @@ function ResumeWorkspaceReady({ model }: { model: ResumeWorkspaceReadyModel }) {
                   {note}
                 </div>
               ))}
+            </div>
+          </div>
+
+          <div className="panel rounded-[1.8rem] p-5 sm:p-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
+              Current Selection
+            </p>
+            <div className="mt-4 grid gap-3">
+              <div className="rounded-[1.2rem] border border-slate-200/80 bg-white/82 px-4 py-4 text-sm leading-7 text-[color:var(--muted)]">
+                요약 소개 길이:{" "}
+                {draft.summary.trim().length > 0
+                  ? `${draft.summary.trim().length}자`
+                  : "미입력"}
+              </div>
+              <div className="rounded-[1.2rem] border border-slate-200/80 bg-white/82 px-4 py-4 text-sm leading-7 text-[color:var(--muted)]">
+                선택된 경험:{" "}
+                {selectedExperience && resolvedExperienceIndex !== null
+                  ? formatExperienceLabel(selectedExperience, resolvedExperienceIndex)
+                  : "없음"}
+              </div>
+              <div className="rounded-[1.2rem] border border-slate-200/80 bg-white/82 px-4 py-4 text-sm leading-7 text-[color:var(--muted)]">
+                선택된 프로젝트:{" "}
+                {selectedProject && resolvedProjectIndex !== null
+                  ? formatProjectLabel(selectedProject, resolvedProjectIndex)
+                  : "없음"}
+              </div>
             </div>
           </div>
         </div>
