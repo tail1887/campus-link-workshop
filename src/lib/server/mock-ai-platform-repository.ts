@@ -217,28 +217,62 @@ export async function getMockGitHubAnalysisJobRecord(user: User, jobId: string) 
   }
 }
 
-export function createMockAiSuggestionJobRecord(
+export async function createMockAiSuggestionJobRecord(
   user: User,
   request: CreateAiSuggestionJobRequest,
 ) {
   const now = new Date().toISOString();
-  const job: AiSuggestionJob = {
+  const normalizedRequest = normalizeCreateAiSuggestionJobRequest(request);
+  const queuedJob: AiSuggestionJob = {
     id: randomUUID(),
     userId: user.id,
     kind: "ai_suggestion",
-    status: "queued",
+    status: "running",
     provider: providers.aiSuggestion.provider,
-    request: normalizeCreateAiSuggestionJobRequest(request),
+    request: normalizedRequest,
     result: null,
     error: null,
     requestedAt: now,
-    startedAt: null,
+    startedAt: now,
     completedAt: null,
     updatedAt: now,
   };
 
-  mockAiSuggestionJobs.set(job.id, job);
-  return job;
+  mockAiSuggestionJobs.set(queuedJob.id, queuedJob);
+
+  try {
+    const result = await executeAiSuggestions({
+      user,
+      request: normalizedRequest,
+    });
+
+    const succeededJob: AiSuggestionJob = {
+      ...queuedJob,
+      status: "succeeded",
+      result,
+      error: null,
+      completedAt: now,
+      updatedAt: now,
+    };
+
+    mockAiSuggestionJobs.set(succeededJob.id, succeededJob);
+    return succeededJob;
+  } catch {
+    const failedJob: AiSuggestionJob = {
+      ...queuedJob,
+      status: "failed",
+      error: buildAiJobError(
+        "UPSTREAM_FAILED",
+        "AI suggestion provider 응답을 가져오지 못했습니다.",
+        true,
+      ),
+      completedAt: now,
+      updatedAt: now,
+    };
+
+    mockAiSuggestionJobs.set(failedJob.id, failedJob);
+    return failedJob;
+  }
 }
 
 export async function getMockAiSuggestionJobRecord(user: User, jobId: string) {

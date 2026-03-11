@@ -267,6 +267,16 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
               );
             }
 
+            if (result.data.job.status === "succeeded" && result.data.job.result) {
+              return result.data.job.result;
+            }
+
+            if (result.data.job.status === "failed") {
+              throw new Error(
+                result.data.job.error?.message ?? "AI suggestion 생성에 실패했습니다.",
+              );
+            }
+
             return pollSuggestionJob(result.data.job.id);
           }),
         );
