@@ -1,4 +1,5 @@
 export type RecruitCategory = "study" | "project" | "hackathon";
+export type ApplicationStatus = "pending" | "reviewed" | "accepted" | "rejected";
 
 export type RecruitPost = {
   id: string;
@@ -16,6 +17,7 @@ export type RecruitPost = {
   deadline: string;
   createdAt: string;
   highlight: boolean;
+  ownerId?: string | null;
   ownerName: string;
   ownerRole: string;
   meetingStyle: string;
@@ -41,19 +43,23 @@ export type CreateRecruitPostInput = {
   meetingStyle: string;
   schedule: string;
   goal: string;
+  ownerId?: string | null;
 };
 
 export type RecruitApplication = {
   id: string;
   postSlug: string;
+  applicantId?: string | null;
   name: string;
   contact: string;
   message: string;
+  status: ApplicationStatus;
   createdAt: string;
 };
 
 export type CreateRecruitApplicationInput = {
   postSlug: string;
+  applicantId?: string | null;
   name: string;
   contact: string;
   message: string;

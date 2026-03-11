@@ -47,7 +47,12 @@ export default async function RecruitCreatePage() {
               ))}
             </div>
           </div>
-          <CreatePostForm />
+          <CreatePostForm
+            currentUser={{
+              id: authContext.user.id,
+              displayName: authContext.user.displayName,
+            }}
+          />
         </div>
       </section>
     </div>

@@ -17,6 +17,10 @@ import {
   getPrismaOnboardingStateByUserId,
   updatePrismaOnboardingState,
 } from "@/lib/server/prisma-identity-repository";
+import {
+  getConfiguredDataSource,
+  withRepositoryFallback,
+} from "@/lib/server/repository-fallback";
 import type {
   AuthContext,
   IdentityDataSource,
@@ -41,27 +45,17 @@ export type CreateIdentityUserInput = {
   role: Role;
 };
 
-function assertDatabaseConfigured() {
-  if (!process.env.DATABASE_URL) {
-    throw new Error(
-      "DATABASE_URL is required when RECRUIT_DATA_SOURCE=database.",
-    );
-  }
-}
-
 export function getIdentityDataSource(): IdentityDataSource {
-  return process.env.RECRUIT_DATA_SOURCE === "database" ? "database" : "mock";
+  return getConfiguredDataSource();
 }
 
 export async function findIdentityAccountByEmail(email: string) {
   const normalizedEmail = normalizeEmail(email);
-
-  if (getIdentityDataSource() === "database") {
-    assertDatabaseConfigured();
-    return findPrismaIdentityAccountByEmail(normalizedEmail);
-  }
-
-  return findMockIdentityAccountByEmail(normalizedEmail);
+  return withRepositoryFallback({
+    scope: "identity.findIdentityAccountByEmail",
+    database: () => findPrismaIdentityAccountByEmail(normalizedEmail),
+    mock: () => findMockIdentityAccountByEmail(normalizedEmail),
+  });
 }
 
 export async function createIdentityUser(input: CreateIdentityUserInput) {
@@ -69,51 +63,45 @@ export async function createIdentityUser(input: CreateIdentityUserInput) {
     ...input,
     email: normalizeEmail(input.email),
   };
-
-  if (getIdentityDataSource() === "database") {
-    assertDatabaseConfigured();
-    return createPrismaIdentityUser(normalizedInput);
-  }
-
-  return createMockIdentityUser(normalizedInput);
+  return withRepositoryFallback({
+    scope: "identity.createIdentityUser",
+    database: () => createPrismaIdentityUser(normalizedInput),
+    mock: () => createMockIdentityUser(normalizedInput),
+  });
 }
 
 export async function createIdentitySession(userId: string) {
-  if (getIdentityDataSource() === "database") {
-    assertDatabaseConfigured();
-    return createPrismaIdentitySession(userId);
-  }
-
-  return createMockIdentitySession(userId);
+  return withRepositoryFallback({
+    scope: "identity.createIdentitySession",
+    database: () => createPrismaIdentitySession(userId),
+    mock: () => createMockIdentitySession(userId),
+  });
 }
 
 export async function deleteIdentitySession(sessionId: string) {
-  if (getIdentityDataSource() === "database") {
-    assertDatabaseConfigured();
-    return deletePrismaIdentitySession(sessionId);
-  }
-
-  return deleteMockIdentitySession(sessionId);
+  return withRepositoryFallback({
+    scope: "identity.deleteIdentitySession",
+    database: () => deletePrismaIdentitySession(sessionId),
+    mock: () => deleteMockIdentitySession(sessionId),
+  });
 }
 
 export async function getAuthContextBySessionId(
   sessionId: string,
 ): Promise<AuthContext | null> {
-  if (getIdentityDataSource() === "database") {
-    assertDatabaseConfigured();
-    return getPrismaAuthContextBySessionId(sessionId);
-  }
-
-  return getMockAuthContextBySessionId(sessionId);
+  return withRepositoryFallback({
+    scope: "identity.getAuthContextBySessionId",
+    database: () => getPrismaAuthContextBySessionId(sessionId),
+    mock: () => getMockAuthContextBySessionId(sessionId),
+  });
 }
 
 export async function getOnboardingStateByUserId(userId: string) {
-  if (getIdentityDataSource() === "database") {
-    assertDatabaseConfigured();
-    return getPrismaOnboardingStateByUserId(userId);
-  }
-
-  return getMockOnboardingStateByUserId(userId);
+  return withRepositoryFallback({
+    scope: "identity.getOnboardingStateByUserId",
+    database: () => getPrismaOnboardingStateByUserId(userId),
+    mock: () => getMockOnboardingStateByUserId(userId),
+  });
 }
 
 export async function updateIdentityOnboardingState(
@@ -128,10 +116,9 @@ export async function updateIdentityOnboardingState(
 
   const nextState = applyOnboardingPatch(current, patch);
 
-  if (getIdentityDataSource() === "database") {
-    assertDatabaseConfigured();
-    return updatePrismaOnboardingState(nextState);
-  }
-
-  return updateMockOnboardingState(nextState);
+  return withRepositoryFallback({
+    scope: "identity.updateIdentityOnboardingState",
+    database: () => updatePrismaOnboardingState(nextState),
+    mock: () => updateMockOnboardingState(nextState),
+  });
 }

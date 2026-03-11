@@ -30,6 +30,7 @@ function mapPost(record: {
   deadline: Date;
   createdAt: Date;
   highlight: boolean;
+  ownerId: string | null;
   ownerName: string;
   ownerRole: string;
   meetingStyle: string;
@@ -48,17 +49,21 @@ function mapPost(record: {
 function mapApplication(record: {
   id: string;
   post: { slug: string };
+  applicantId: string | null;
   name: string;
   contact: string;
   message: string;
+  status: RecruitApplication["status"];
   createdAt: Date;
 }): RecruitApplication {
   return {
     id: record.id,
     postSlug: record.post.slug,
+    applicantId: record.applicantId,
     name: record.name,
     contact: record.contact,
     message: record.message,
+    status: record.status,
     createdAt: record.createdAt.toISOString(),
   };
 }
@@ -95,6 +100,7 @@ export async function createPrismaPost(
       capacity: input.capacity,
       stage: input.stage,
       deadline: new Date(input.deadline),
+      ownerId: input.ownerId ?? null,
       ownerName: input.ownerName,
       ownerRole: input.ownerRole,
       meetingStyle: input.meetingStyle,
@@ -124,6 +130,20 @@ export async function hasPrismaDuplicateApplication(
   return Boolean(duplicate);
 }
 
+export async function listPrismaApplicationsByApplicant(applicantId: string) {
+  const applications = await prisma.recruitApplication.findMany({
+    where: { applicantId },
+    orderBy: { createdAt: "desc" },
+    include: {
+      post: {
+        select: { slug: true },
+      },
+    },
+  });
+
+  return applications.map(mapApplication);
+}
+
 export async function createPrismaApplication(
   input: CreateRecruitApplicationInput,
 ) {
@@ -132,6 +152,7 @@ export async function createPrismaApplication(
       post: {
         connect: { slug: input.postSlug },
       },
+      applicantId: input.applicantId ?? null,
       name: input.name.trim(),
       contact: input.contact.trim().toLowerCase(),
       message: input.message.trim(),

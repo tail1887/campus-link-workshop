@@ -41,6 +41,7 @@ flowchart LR
 - 프론트 역할: 랜딩, 목록, 상세, 글쓰기, 지원하기 화면 렌더링과 상호작용 처리
 - API 역할: 모집글 API와 함께 Phase 1 auth / onboarding, Phase 2 profile / resume / verification / inquiry / alert preference, Phase 3 GitHub / AI job API 응답 제공
 - Repository 역할: `RECRUIT_DATA_SOURCE` 값에 따라 PostgreSQL 또는 mock 저장소를 선택
+- Demo 안전장치: `RECRUIT_DATA_SOURCE=database` 이어도 `DATABASE_URL` 누락이나 Prisma 조회 실패가 나면 repository layer가 mock 저장소로 강등되어 프로필/모집 데모 흐름을 유지한다
 - Recruit 데이터 저장 방식: 기본값은 seed 데이터와 localStorage fallback, DB 모드에서는 Prisma를 통해 PostgreSQL 사용
 - Identity 데이터 저장 방식: Phase 1 기준으로 같은 data source 모드를 따르며, mock 모드에서는 메모리 저장소와 demo 계정을 사용하고 DB 모드에서는 Prisma `User`, `Session`, `OnboardingState`를 사용한다
 - Profile Communication 데이터 저장 방식: Phase 2 기준으로 같은 data source 모드를 따르며, mock 모드에서는 demo 프로필/이력서/문의/알림 설정 store를 사용하고 DB 모드에서는 Prisma `Profile`, `Resume`, `Verification`, `Inquiry`, `AlertPreference`를 사용한다

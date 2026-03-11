@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getCurrentAuthContext } from "@/lib/server/auth-context";
 import {
   createRecruitApplication,
   findRecruitPost,
@@ -12,6 +13,7 @@ type RouteContext = {
 };
 
 export async function POST(request: Request, context: RouteContext) {
+  const authContext = await getCurrentAuthContext();
   const { slug } = await context.params;
   const body = (await request.json()) as Partial<CreateRecruitApplicationInput>;
   const post = await findRecruitPost(slug);
@@ -57,6 +59,7 @@ export async function POST(request: Request, context: RouteContext) {
 
   const application = await createRecruitApplication({
     postSlug: slug,
+    applicantId: authContext.authenticated ? authContext.user.id : null,
     name: body.name,
     contact: body.contact,
     message: body.message,

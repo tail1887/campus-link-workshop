@@ -4,13 +4,20 @@ import { useEffect, useState, useTransition } from "react";
 import { addStoredApplication, getStoredApplications } from "@/lib/storage";
 import type { RecruitApplication, RecruitPost } from "@/types/recruit";
 
+type CurrentUser = {
+  id: string;
+  email: string;
+  displayName: string;
+} | null;
+
 type ApplyPanelProps = {
   post: RecruitPost;
+  currentUser: CurrentUser;
 };
 
-export function ApplyPanel({ post }: ApplyPanelProps) {
-  const [name, setName] = useState("");
-  const [contact, setContact] = useState("");
+export function ApplyPanel({ post, currentUser }: ApplyPanelProps) {
+  const [name, setName] = useState(currentUser?.displayName ?? "");
+  const [contact, setContact] = useState(currentUser?.email ?? "");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -84,17 +91,19 @@ export function ApplyPanel({ post }: ApplyPanelProps) {
       const application: RecruitApplication = {
         id: payload.data.applicationId,
         postSlug: post.slug,
+        applicantId: currentUser?.id ?? null,
         name: name.trim(),
         contact: contact.trim(),
         message: message.trim(),
+        status: "pending",
         createdAt: new Date().toISOString(),
       };
 
       addStoredApplication(application);
       setAppliedCount((count) => count + 1);
       setSuccess(payload.data.message);
-      setName("");
-      setContact("");
+      setName(currentUser?.displayName ?? "");
+      setContact(currentUser?.email ?? "");
       setMessage("");
     });
   };

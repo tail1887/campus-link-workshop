@@ -183,6 +183,7 @@ export function createRuntimeRecruitPost(
     deadline: input.deadline,
     createdAt: new Date().toISOString(),
     highlight: true,
+    ownerId: input.ownerId ?? null,
     ownerName: input.ownerName,
     ownerRole: input.ownerRole,
     meetingStyle: input.meetingStyle,
@@ -203,9 +204,11 @@ export function createRuntimeApplication(
   return {
     id: `apply_${Date.now()}`,
     postSlug: input.postSlug,
+    applicantId: input.applicantId ?? null,
     name: input.name.trim(),
     contact: input.contact.trim(),
     message: input.message.trim(),
+    status: "pending",
     createdAt: new Date().toISOString(),
   };
 }
