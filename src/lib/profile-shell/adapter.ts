@@ -109,6 +109,27 @@ export function buildProfileShellViewModel(input: {
                 href: "/resume",
               },
               {
+                title: "My Recruit Posts",
+                description:
+                  "현재 세션으로 작성한 모집글을 모아 보고 상세 화면으로 다시 진입하는 관리 화면",
+                state: "management",
+                href: "/profile/recruits",
+              },
+              {
+                title: "My Applications",
+                description:
+                  "현재 세션으로 지원한 모집글과 접수 상태를 확인하는 참가 관리 화면",
+                state: "management",
+                href: "/profile/applications",
+              },
+              {
+                title: "GitHub Analysis",
+                description:
+                  "GitHub 등록, 연결 상태 관리, AI 프로젝트 분석 결과 UI를 다루는 Phase 3 B 진입점",
+                state: "phase-3-track",
+                href: "/github-analysis",
+              },
+              {
                 title: "Communication Center",
                 description:
                   "문의하기, 알림 설정, 사용자 커뮤니케이션 로그가 연결될 Phase 2 D 슬롯",
@@ -194,6 +215,13 @@ export function buildProfileShellViewModel(input: {
             description: "콘텐츠 운영, 검수, 문의 처리 화면이 후속 Phase에서 연결될 진입 카드",
             state: "future-bridge",
           },
+          {
+            title: "GitHub Analysis Reuse",
+            description:
+              "학생 GitHub 연결 상태와 프로젝트 분석 요약을 운영 표면에서 재사용할 Phase 3 B handoff 진입점",
+            state: "phase-3-track",
+            href: "/github-analysis",
+          },
         ]
       : [
           {
@@ -205,6 +233,27 @@ export function buildProfileShellViewModel(input: {
             title: "Growth Modules",
             description: "추가 인증, 이력서, GitHub, 알림 설정이 이어질 모듈 그리드",
             state: "future-bridge",
+          },
+          {
+            title: "My Recruit Posts",
+            description:
+              "로그인한 학생이 현재 세션으로 작성한 모집글을 다시 열고 관리하는 화면",
+            state: "management",
+            href: "/profile/recruits",
+          },
+          {
+            title: "My Applications",
+            description:
+              "로그인한 학생이 지원한 모집글과 접수 상태를 확인하는 화면",
+            state: "management",
+            href: "/profile/applications",
+          },
+          {
+            title: "GitHub Analysis",
+            description:
+              "GitHub 등록, 연결 상태 관리, branch-local 프로젝트 분석 결과를 다루는 Phase 3 B 워크스페이스",
+            state: "phase-3-track",
+            href: "/github-analysis",
           },
           {
             title: "Resume Workspace",
@@ -235,6 +284,7 @@ export function buildProfileShellViewModel(input: {
         : "현재 페이지는 세션 역할과 동일한 기본 셸입니다.",
       "실제 profile detail contract는 Phase 2 프로필 계약 브랜치에서 이 셸 안으로 연결합니다.",
       "Phase 2 D 커뮤니케이션 센터는 /profile/communication 경로에서 branch-local adapter로 먼저 연결됩니다.",
+      "Phase 3 B GitHub 분석 워크스페이스는 /github-analysis 경로에서 branch-local adapter와 canned analysis UI로 먼저 연결됩니다.",
     ],
   };
 }

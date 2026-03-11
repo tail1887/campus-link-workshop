@@ -7,6 +7,7 @@ import {
   createMockPost,
   findMockPost,
   hasMockDuplicateApplication,
+  listMockApplicationsByApplicant,
   listMockPosts,
 } from "@/lib/server/mock-recruit-repository";
 import {
@@ -14,8 +15,13 @@ import {
   createPrismaPost,
   findPrismaPost,
   hasPrismaDuplicateApplication,
+  listPrismaApplicationsByApplicant,
   listPrismaPosts,
 } from "@/lib/server/prisma-recruit-repository";
+import {
+  getConfiguredDataSource,
+  withRepositoryFallback,
+} from "@/lib/server/repository-fallback";
 import type {
   CreateRecruitApplicationInput,
   CreateRecruitPostInput,
@@ -24,62 +30,57 @@ import type {
 export type RecruitDataSource = "mock" | "database";
 
 export function getRecruitDataSource(): RecruitDataSource {
-  return process.env.RECRUIT_DATA_SOURCE === "database" ? "database" : "mock";
-}
-
-function assertDatabaseConfigured() {
-  if (!process.env.DATABASE_URL) {
-    throw new Error(
-      "DATABASE_URL is required when RECRUIT_DATA_SOURCE=database.",
-    );
-  }
+  return getConfiguredDataSource();
 }
 
 export async function listRecruitPosts() {
-  if (getRecruitDataSource() === "database") {
-    assertDatabaseConfigured();
-    return listPrismaPosts();
-  }
-
-  return listMockPosts();
+  return withRepositoryFallback({
+    scope: "recruit.listRecruitPosts",
+    database: () => listPrismaPosts(),
+    mock: () => listMockPosts(),
+  });
 }
 
 export async function findRecruitPost(slug: string) {
-  if (getRecruitDataSource() === "database") {
-    assertDatabaseConfigured();
-    return findPrismaPost(slug);
-  }
-
-  return findMockPost(slug);
+  return withRepositoryFallback({
+    scope: "recruit.findRecruitPost",
+    database: () => findPrismaPost(slug),
+    mock: () => findMockPost(slug),
+  });
 }
 
 export async function createRecruitPost(
   input: CreateRecruitPostInput & { slug: string },
 ) {
-  if (getRecruitDataSource() === "database") {
-    assertDatabaseConfigured();
-    return createPrismaPost(input);
-  }
-
-  return createMockPost(createRuntimeRecruitPost(input));
+  return withRepositoryFallback({
+    scope: "recruit.createRecruitPost",
+    database: () => createPrismaPost(input),
+    mock: () => createMockPost(createRuntimeRecruitPost(input)),
+  });
 }
 
 export async function hasDuplicateApplication(postSlug: string, contact: string) {
-  if (getRecruitDataSource() === "database") {
-    assertDatabaseConfigured();
-    return hasPrismaDuplicateApplication(postSlug, contact);
-  }
+  return withRepositoryFallback({
+    scope: "recruit.hasDuplicateApplication",
+    database: () => hasPrismaDuplicateApplication(postSlug, contact),
+    mock: () => hasMockDuplicateApplication(postSlug, contact),
+  });
+}
 
-  return hasMockDuplicateApplication(postSlug, contact);
+export async function listRecruitApplicationsByApplicant(applicantId: string) {
+  return withRepositoryFallback({
+    scope: "recruit.listRecruitApplicationsByApplicant",
+    database: () => listPrismaApplicationsByApplicant(applicantId),
+    mock: () => listMockApplicationsByApplicant(applicantId),
+  });
 }
 
 export async function createRecruitApplication(
   input: CreateRecruitApplicationInput,
 ) {
-  if (getRecruitDataSource() === "database") {
-    assertDatabaseConfigured();
-    return createPrismaApplication(input);
-  }
-
-  return createMockApplication(createRuntimeApplication(input));
+  return withRepositoryFallback({
+    scope: "recruit.createRecruitApplication",
+    database: () => createPrismaApplication(input),
+    mock: () => createMockApplication(createRuntimeApplication(input)),
+  });
 }

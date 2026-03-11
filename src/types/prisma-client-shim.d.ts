@@ -37,6 +37,7 @@ declare module "@prisma/client" {
     };
     recruitApplication: {
       findFirst(args: unknown): Promise<any>;
+      findMany(args: unknown): Promise<any[]>;
       create(args: unknown): Promise<any>;
     };
     profile: {

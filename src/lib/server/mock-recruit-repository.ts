@@ -18,6 +18,12 @@ export function createMockPost(post: RecruitPost) {
   return post;
 }
 
+export function listMockApplicationsByApplicant(applicantId: string) {
+  return runtimeApplications.filter(
+    (application) => application.applicantId === applicantId,
+  );
+}
+
 export function hasMockDuplicateApplication(postSlug: string, contact: string) {
   const normalizedContact = contact.trim().toLowerCase();
   return runtimeApplications.some(

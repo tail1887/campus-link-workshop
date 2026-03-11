@@ -3,6 +3,7 @@ import {
   buildSlugFromTitle,
   filterPosts,
 } from "@/lib/recruit";
+import { getCurrentAuthContext } from "@/lib/server/auth-context";
 import {
   createRecruitPost,
   getRecruitDataSource,
@@ -36,6 +37,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const authContext = await getCurrentAuthContext();
   const body = (await request.json()) as Partial<CreateRecruitPostInput>;
 
   if (
@@ -76,6 +78,7 @@ export async function POST(request: Request) {
     meetingStyle: body.meetingStyle ?? "온·오프라인 혼합",
     schedule: body.schedule ?? "세부 일정 협의",
     goal: body.goal ?? "데모 완성",
+    ownerId: authContext.authenticated ? authContext.user.id : null,
     slug,
   });
 
