@@ -48,6 +48,14 @@ export async function SiteHeader() {
             >
               프로필 진입
             </Link>
+            {authContext.authenticated && authContext.user.role === "student" ? (
+              <Link
+                href="/profile/communication"
+                className="text-sm font-semibold text-[color:var(--muted)] hover:text-slate-950"
+              >
+                문의/알림
+              </Link>
+            ) : null}
           </nav>
 
           <div className="flex items-center gap-2">
