@@ -23,7 +23,7 @@ export function LogoutButton() {
       type="button"
       onClick={logout}
       disabled={isPending}
-      className="rounded-full border border-slate-200/80 bg-white/84 px-4 py-3 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-70"
+      className="button-ghost px-4 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-70"
     >
       {isPending ? "세션 종료 중..." : "로그아웃"}
     </button>
