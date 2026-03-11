@@ -12,7 +12,7 @@ export type ProfileShellViewModel = {
   ctaLabel: string;
   summaryCards: Array<{ label: string; value: string }>;
   checklist: string[];
-  modules: Array<{ title: string; description: string; state: string }>;
+  modules: Array<{ title: string; description: string; state: string; href?: string }>;
   notes: string[];
 };
 
@@ -85,6 +85,17 @@ export function buildProfileShellViewModel(input: {
               : "Phase 2 프로필, 인증, 이력서 흐름이 이 셸에서 이어집니다.",
           state: "future-bridge",
         },
+        ...(role === "student"
+          ? [
+              {
+                title: "Communication Center",
+                description:
+                  "문의하기, 알림 설정, 사용자 커뮤니케이션 로그가 연결될 Phase 2 D 슬롯",
+                state: "phase-2-track",
+                href: "/profile/communication",
+              },
+            ]
+          : []),
       ],
       notes: [
         "현재 셸은 branch-local adapter가 게스트/역할 분기만 담당합니다.",
@@ -151,6 +162,13 @@ export function buildProfileShellViewModel(input: {
             description: "추가 인증, 이력서, GitHub, 알림 설정이 이어질 모듈 그리드",
             state: "future-bridge",
           },
+          {
+            title: "Communication Center",
+            description:
+              "문의 제출 흐름, 최근 메시지 로그, 사용자 알림 설정을 연결하는 Phase 2 D 진입 모듈",
+            state: "phase-2-track",
+            href: "/profile/communication",
+          },
         ],
     notes: [
       `현재 인증 컨텍스트의 role source는 ${actualRole}입니다.`,
@@ -158,6 +176,7 @@ export function buildProfileShellViewModel(input: {
         ? "이 페이지는 다른 역할 셸 미리보기이므로, 기본 CTA는 실제 세션 역할 셸로 되돌립니다."
         : "현재 페이지는 세션 역할과 동일한 기본 셸입니다.",
       "실제 profile detail contract는 Phase 2 프로필 계약 브랜치에서 이 셸 안으로 연결합니다.",
+      "Phase 2 D 커뮤니케이션 센터는 /profile/communication 경로에서 branch-local adapter로 먼저 연결됩니다.",
     ],
   };
 }
