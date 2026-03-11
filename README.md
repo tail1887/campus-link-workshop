@@ -89,8 +89,8 @@ npm run build
 ## 배포 메모
 
 - GitHub 저장소를 Vercel에 Import 하면 바로 배포 가능
-- PostgreSQL 모드 배포 시에는 `DATABASE_URL`, `RECRUIT_DATA_SOURCE` 환경 변수가 필요
-- 2026-03-11 현재 Vercel 프로젝트에는 위 환경 변수가 등록되지 않아, 배포 사이트는 아직 `mock` 모드로 동작
+- PostgreSQL 모드 배포 시에는 `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `RECRUIT_DATA_SOURCE` 환경 변수가 필요
+- 2026-03-11 현재 Vercel 프로젝트는 Neon Postgres가 연결되어 있고, 프로덕션/프리뷰/개발 환경에 DB 연결 값이 등록되어 있다
 - 로컬은 Docker 기반 PostgreSQL을 붙일 수 있고, 배포는 Neon 같은 관리형 PostgreSQL을 별도로 연결하는 구조
 - GitHub Repository: [tail1887/campus-link-workshop](https://github.com/tail1887/campus-link-workshop)
 
