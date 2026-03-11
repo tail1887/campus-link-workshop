@@ -51,8 +51,8 @@ export function RecruitBoard({ initialPosts }: RecruitBoardProps) {
             </h1>
             <p className="section-subtitle">
               카테고리와 검색으로 빠르게 좁히고, 상세 페이지에서 팀 목표와
-            역할을 한 번에 확인해 보세요. 기본값은 브라우저 fallback 저장으로
-            동작하며, DB 모드에서는 서버 데이터가 우선됩니다.
+              역할을 한 번에 확인해 보세요. 최근에 작성한 내 브라우저 저장 글도
+              함께 반영되어 이어서 탐색할 수 있습니다.
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
@@ -132,7 +132,7 @@ export function RecruitBoard({ initialPosts }: RecruitBoardProps) {
             <div>
               <span className="eyebrow">Highlight Picks</span>
               <h2 className="mt-3 display text-3xl text-slate-950">
-                발표용으로 먼저 보여주기 좋은 모집글
+                지금 주목받는 추천 모집글
               </h2>
             </div>
           </div>
@@ -165,8 +165,7 @@ export function RecruitBoard({ initialPosts }: RecruitBoardProps) {
               조건에 맞는 모집글이 아직 없습니다.
             </p>
             <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-[color:var(--muted)]">
-              검색어를 바꾸거나 새 모집글을 작성해서 데모 흐름을 이어갈 수
-              있습니다.
+              검색어를 바꾸거나 새 모집글을 작성해 새로운 팀을 만들어보세요.
             </p>
             <Link href="/recruit/new" className="button-primary mt-6">
               모집글 직접 작성하기

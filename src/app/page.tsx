@@ -75,7 +75,7 @@ export default async function HomePage() {
                     Today Board
                   </p>
                   <p className="mt-2 display text-2xl text-slate-950">
-                    발표 흐름을 위한 한 화면 데모
+                    지금 바로 팀을 찾는 실시간 모집 보드
                   </p>
                 </div>
                 <div className="animate-float rounded-full bg-[color:var(--accent-soft)] px-3 py-2 text-sm font-semibold text-[color:var(--accent-strong)]">
@@ -159,8 +159,8 @@ export default async function HomePage() {
             가치가 보여야 합니다.
           </h2>
           <p className="section-subtitle">
-            Campus Link는 발표 때 설명이 길어지지 않도록, 문제 정의와 사용자
-            행동이 화면 구조 안에 바로 드러나게 설계했습니다.
+            Campus Link는 팀 탐색부터 지원까지의 핵심 흐름이 한 번에 보이도록
+            설계되어, 처음 방문한 사용자도 빠르게 필요한 팀을 찾을 수 있습니다.
           </p>
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
@@ -176,9 +176,9 @@ export default async function HomePage() {
                 "팀 목표, 모집 역할, 일정이 명확하게 정리되어 지원 판단이 쉽습니다.",
             },
             {
-              title: "데모 완결",
+              title: "지원 연결",
               description:
-                "글쓰기와 지원하기가 데모 저장 흐름으로 이어져 발표 중 흐름이 끊기지 않습니다.",
+                "글 작성과 지원 흐름이 자연스럽게 이어져 팀 모집과 합류가 끊기지 않습니다.",
             },
           ].map((item, index) => (
             <div
@@ -205,7 +205,7 @@ export default async function HomePage() {
           <div className="space-y-3">
             <span className="eyebrow">Featured Boards</span>
             <h2 className="section-title text-slate-950">
-              발표에 바로 쓰기 좋은
+              지금 주목받는
               <br />
               대표 모집글 라인업
             </h2>
@@ -229,21 +229,21 @@ export default async function HomePage() {
       <section className="panel-strong rounded-[2rem] px-6 py-7 sm:px-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-3">
-            <span className="eyebrow">Demo Flow</span>
+            <span className="eyebrow">Core Flow</span>
             <h2 className="display text-3xl text-slate-950 sm:text-4xl">
               메인 → 목록 → 상세 → 지원 → 글쓰기
             </h2>
             <p className="max-w-2xl text-sm leading-7 text-[color:var(--muted)] sm:text-base">
-              발표에서는 탐색 흐름과 생성 흐름을 모두 보여줄 수 있도록 두 개의
-              CTA를 중심으로 동선을 설계했습니다.
+              탐색 흐름과 생성 흐름을 모두 빠르게 오갈 수 있도록 두 개의 CTA를
+              중심으로 주요 동선을 구성했습니다.
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
             <Link href="/recruit" className="button-primary">
-              지원 플로우 시연
+              지원하러 가기
             </Link>
             <Link href="/recruit/new" className="button-secondary">
-              글쓰기 플로우 시연
+              모집글 작성하기
             </Link>
           </div>
         </div>

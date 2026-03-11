@@ -41,8 +41,8 @@ export function MyRecruitPostsPanel({
               내가 올린 모집 글 관리
             </h1>
             <p className="section-subtitle">
-              현재 세션으로 작성한 모집글만 모아 봅니다. mock 모드에서는
-              브라우저 저장 글과 서버 runtime 글을 함께 합쳐 보여줍니다.
+              현재 계정으로 작성한 모집글만 모아 봅니다. 최근에 작성한 브라우저
+              저장 글도 함께 반영되어 이어서 관리할 수 있습니다.
             </p>
           </div>
           <Link href="/recruit/new" className="button-primary">

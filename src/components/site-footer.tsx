@@ -8,7 +8,7 @@ export function SiteFooter() {
               Campus Link
             </p>
             <p className="text-sm leading-7 text-[color:var(--muted)]">
-              발표와 데모 흐름을 모두 고려한 캠퍼스 스터디/프로젝트 매칭 플랫폼
+              캠퍼스 스터디와 프로젝트 팀을 연결하는 매칭 플랫폼
             </p>
           </div>
           <div className="text-sm leading-7 text-[color:var(--muted)]">
