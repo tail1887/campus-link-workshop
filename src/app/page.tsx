@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { PostCard } from "@/components/post-card";
 import { categoryMeta } from "@/lib/recruit";
-import { listMockPosts } from "@/lib/server/mock-recruit-repository";
+import { listRecruitPosts } from "@/lib/server/recruit-repository";
 
-export default function HomePage() {
-  const posts = listMockPosts();
+export const dynamic = "force-dynamic";
+
+export default async function HomePage() {
+  const posts = await listRecruitPosts();
   const featuredPosts = posts.filter((post) => post.highlight).slice(0, 3);
   const openRoles = posts.reduce((sum, post) => sum + post.capacity, 0);
   const campusCount = new Set(posts.map((post) => post.campus)).size;
@@ -175,7 +177,7 @@ export default function HomePage() {
             {
               title: "데모 완결",
               description:
-                "글쓰기와 지원하기가 mock으로 이어져 발표 중 흐름이 끊기지 않습니다.",
+                "글쓰기와 지원하기가 데모 저장 흐름으로 이어져 발표 중 흐름이 끊기지 않습니다.",
             },
           ].map((item, index) => (
             <div

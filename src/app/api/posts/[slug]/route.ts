@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { findMockPost } from "@/lib/server/mock-recruit-repository";
+import { findRecruitPost } from "@/lib/server/recruit-repository";
 
 type RouteContext = {
   params: Promise<{ slug: string }>;
@@ -7,7 +7,7 @@ type RouteContext = {
 
 export async function GET(_request: Request, context: RouteContext) {
   const { slug } = await context.params;
-  const post = findMockPost(slug);
+  const post = await findRecruitPost(slug);
 
   if (!post) {
     return NextResponse.json(

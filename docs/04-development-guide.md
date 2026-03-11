@@ -31,6 +31,7 @@
 - mock API 단위
 - 배포 / CI 단위
 - 문서 / 발표 정리 단위
+- DB scaffold / repository contract 단위
 
 ## 2) 커밋 규칙
 
@@ -78,16 +79,17 @@
 ## 5) Codex 기준 구현 순서
 
 1. Next.js 앱 부트스트랩
-2. 공통 레이아웃과 디자인 토큰 구성
-3. mock 데이터 모델과 API route 추가
-4. 메인 랜딩 페이지 구현
-5. 모집글 목록 / 상세 페이지 구현
-6. 글쓰기 / 지원하기 mock 플로우 구현
-7. localStorage 기반 데모 상태 보강
-8. lint / build 검증
-9. Vercel 배포 점검
-10. GitHub CI/CD와 협업 규칙 정리
-11. README 발표용 정리
+2. PostgreSQL / Prisma scaffold와 repository contract 추가
+3. 공통 레이아웃과 디자인 토큰 구성
+4. mock 데이터 모델과 API route 추가
+5. 메인 랜딩 페이지 구현
+6. 모집글 목록 / 상세 페이지 구현
+7. 글쓰기 / 지원하기 플로우 구현
+8. localStorage fallback과 DB 전환 경계 보강
+9. lint / build 검증
+10. Vercel 배포 점검
+11. GitHub CI/CD와 협업 규칙 정리
+12. README 발표용 정리
 
 ## 6) Codex 태스크 요청 방식
 
@@ -95,6 +97,7 @@
 
 - `docs/01-product-planning.md와 docs/02-architecture.md를 읽고 메인 랜딩 페이지를 구현해줘.`
 - `docs/03-api-reference.md 기준으로 /api/posts와 /api/posts/[slug]를 mock으로 만들어줘.`
+- `Prisma와 PostgreSQL scaffold를 추가하고 mock 저장소와 전환 가능한 repository contract를 만들어줘.`
 - `글쓰기 페이지와 localStorage 저장 흐름만 먼저 구현해줘.`
 - `배포 전에 README를 발표용 데모 시나리오 중심으로 다듬어줘.`
 - `CI 실패 원인을 찾아서 고쳐줘.`
@@ -108,6 +111,7 @@
 ## 7) 테스트 전략
 
 - Smoke Test: 메인 > 목록 > 상세 > 지원하기 > 글쓰기 흐름이 브라우저에서 이어지는지 확인
+- DB Setup Test: `npm run db:generate`
 - Lint Test: `npm run lint`
 - Build Test: `npm run build`
 - 브랜치별 자동/수동 테스트 분리 원칙은 `docs/06-testing-playbook.md`를 따른다.
@@ -119,6 +123,8 @@
 - [ ] 존재하지 않는 slug 접근 시 예외 처리가 된다
 - [ ] 글쓰기 필수 항목 검증이 동작한다
 - [ ] 동일 모집글에 대한 중복 지원이 막힌다
+- [ ] `RECRUIT_DATA_SOURCE=mock`일 때 기존 데모 흐름이 유지된다
+- [ ] `DATABASE_URL`과 `RECRUIT_DATA_SOURCE`가 문서에 반영되어 있다
 - [ ] README와 docs가 최신 상태다
 
 ## 8) PR 체크리스트
@@ -126,6 +132,7 @@
 - [ ] 한 PR은 한 화면 또는 한 흐름에 집중한다
 - [ ] `main`에 직접 push 하지 않았다
 - [ ] mock API나 데이터 구조 변경 시 `docs/03-api-reference.md`를 같이 업데이트했다
+- [ ] DB schema나 repository contract 변경 시 `docs/02-architecture.md`를 같이 업데이트했다
 - [ ] UI 흐름 변경 시 `README.md` 데모 시나리오를 점검했다
 - [ ] `npm run lint`와 `npm run build` 결과를 확인했다
 - [ ] 자동 테스트와 수동 테스트 범위를 구분해서 기록했다

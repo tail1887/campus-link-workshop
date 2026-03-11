@@ -51,8 +51,8 @@ export function RecruitBoard({ initialPosts }: RecruitBoardProps) {
             </h1>
             <p className="section-subtitle">
               카테고리와 검색으로 빠르게 좁히고, 상세 페이지에서 팀 목표와
-              역할을 한 번에 확인해 보세요. 작성한 mock 글은 현재 브라우저에만
-              저장됩니다.
+            역할을 한 번에 확인해 보세요. 기본값은 브라우저 fallback 저장으로
+            동작하며, DB 모드에서는 서버 데이터가 우선됩니다.
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">

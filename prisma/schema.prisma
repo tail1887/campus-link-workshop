@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RecruitCategory {
+  study
+  project
+  hackathon
+}
+
+enum UserRole {
+  student
+  admin
+}
+
+enum VerificationStatus {
+  pending
+  verified
+  rejected
+}
+
+enum ApplicationStatus {
+  pending
+  reviewed
+  accepted
+  rejected
+}
+
+model User {
+  id                 String               @id @default(cuid())
+  email              String               @unique
+  name               String?
+  campus             String?
+  role               UserRole             @default(student)
+  verificationStatus VerificationStatus   @default(pending)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  recruitPosts       RecruitPost[]
+  applications       RecruitApplication[]
+}
+
+model RecruitPost {
+  id             String               @id @default(cuid())
+  slug           String               @unique
+  title          String
+  category       RecruitCategory
+  campus         String
+  summary        String
+  description    String
+  roles          String[]
+  techStack      String[]
+  capacity       Int
+  currentMembers Int                  @default(2)
+  stage          String
+  deadline       DateTime
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  highlight      Boolean              @default(true)
+  ownerName      String
+  ownerRole      String
+  meetingStyle   String
+  schedule       String
+  goal           String
+  expectations   String[]
+  perks          String[]
+  ownerId        String?
+  owner          User?                @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  applications   RecruitApplication[]
+
+  @@index([category, deadline])
+}
+
+model RecruitApplication {
+  id          String            @id @default(cuid())
+  postId      String
+  applicantId String?
+  name        String
+  contact     String
+  message     String
+  status      ApplicationStatus @default(pending)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  applicant   User?             @relation(fields: [applicantId], references: [id], onDelete: SetNull)
+  post        RecruitPost       @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, contact])
+  @@index([createdAt])
+}

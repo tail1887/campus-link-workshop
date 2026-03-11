@@ -58,8 +58,8 @@ export function RecruitDetailView({
             찾고 있는 모집글이 없습니다.
           </p>
           <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-[color:var(--muted)]">
-            삭제되었거나 다른 브라우저에서 만든 mock 글일 수 있습니다. 목록으로
-            돌아가 새 흐름을 이어가 보세요.
+            삭제되었거나 다른 브라우저의 fallback 저장에만 남아 있는 글일 수
+            있습니다. 목록으로 돌아가 새 흐름을 이어가 보세요.
           </p>
           <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
             <Link href="/recruit" className="button-primary">
@@ -93,8 +93,8 @@ export function RecruitDetailView({
 
         {created ? (
           <div className="mt-5 rounded-[1.4rem] bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
-            mock 모집글이 생성되었습니다. 지금 이 화면을 그대로 발표 흐름에
-            사용할 수 있습니다.
+            모집글이 생성되었습니다. 지금 이 화면을 그대로 발표 흐름에 사용할 수
+            있습니다.
           </div>
         ) : null}
 

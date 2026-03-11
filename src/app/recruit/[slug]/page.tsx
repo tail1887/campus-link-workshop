@@ -1,5 +1,5 @@
 import { RecruitDetailView } from "@/components/recruit-detail-view";
-import { findMockPost } from "@/lib/server/mock-recruit-repository";
+import { findRecruitPost } from "@/lib/server/recruit-repository";
 
 type RecruitDetailPageProps = {
   params: Promise<{ slug: string }>;
@@ -12,7 +12,7 @@ export default async function RecruitDetailPage({
 }: RecruitDetailPageProps) {
   const { slug } = await params;
   const query = await searchParams;
-  const initialPost = findMockPost(slug);
+  const initialPost = await findRecruitPost(slug);
 
   return (
     <RecruitDetailView
