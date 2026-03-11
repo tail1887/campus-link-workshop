@@ -11,7 +11,7 @@ export function ProfileEntryShell({ model }: ProfileEntryShellProps) {
       <section className="panel-strong rounded-[2rem] px-6 py-8 sm:px-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-4">
-            <span className="eyebrow">Phase 1 D Track</span>
+            <span className="eyebrow">{model.eyebrow}</span>
             <h1 className="section-title text-slate-950">{model.title}</h1>
             <p className="section-subtitle">{model.subtitle}</p>
           </div>
@@ -37,7 +37,7 @@ export function ProfileEntryShell({ model }: ProfileEntryShellProps) {
         </div>
       </section>
 
-      <section className="grid gap-5 lg:grid-cols-2">
+      <section className="grid gap-5 lg:grid-cols-3">
         {model.cards.map((card) => (
           <Link key={card.href} href={card.href} className="panel rounded-[1.8rem] p-6">
             <div className="flex items-center justify-between gap-4">
