@@ -1,6 +1,8 @@
 import { RecruitBoard } from "@/components/recruit-board";
-import { listMockPosts } from "@/lib/server/mock-recruit-repository";
+import { listRecruitPosts } from "@/lib/server/recruit-repository";
 
-export default function RecruitListPage() {
-  return <RecruitBoard initialPosts={listMockPosts()} />;
+export const dynamic = "force-dynamic";
+
+export default async function RecruitListPage() {
+  return <RecruitBoard initialPosts={await listRecruitPosts()} />;
 }

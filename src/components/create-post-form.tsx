@@ -392,7 +392,7 @@ export function CreatePostForm() {
             disabled={isPending}
             className="button-primary w-full disabled:cursor-not-allowed disabled:opacity-70"
           >
-            {isPending ? "모집글 생성 중..." : "mock 모집글 생성하기"}
+            {isPending ? "모집글 생성 중..." : "모집글 생성하기"}
           </button>
         </div>
       </form>

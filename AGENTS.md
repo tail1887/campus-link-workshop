@@ -81,6 +81,9 @@ Recommended branch types:
 - Local test: `npm run lint`
 - Build: `npm run build`
 - Lint/format: `npm run lint`
+- Prisma generate: `npm run db:generate`
+- Prisma push: `npm run db:push`
+- Prisma studio: `npm run db:studio`
 - Commit template setup: `git config commit.template .gitmessage.txt`
 
 ## Definition of Done
@@ -106,4 +109,4 @@ A task is complete when:
 - Editing unrelated files while implementing a small feature
 - Leaving UI/API/documentation drift behind
 - Treating README as an internal scratchpad
-- Adding real backend scope when the current MVP is explicitly mock-based
+- Adding unrelated backend scope when the current branch does not call for it

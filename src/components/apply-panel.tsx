@@ -104,7 +104,7 @@ export function ApplyPanel({ post }: ApplyPanelProps) {
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-            Mock Apply
+            Apply Flow
           </p>
           <h3 className="mt-2 text-2xl font-semibold text-slate-950">
             이 팀에 지원하기
@@ -116,8 +116,8 @@ export function ApplyPanel({ post }: ApplyPanelProps) {
       </div>
 
       <p className="mt-3 text-sm leading-7 text-[color:var(--muted)]">
-        지원 기록은 현재 브라우저에 저장됩니다. 발표 시에는 제출 완료 메시지와
-        중복 지원 방지 흐름을 함께 보여줄 수 있습니다.
+        기본값은 브라우저 fallback 저장으로 동작합니다. PostgreSQL 모드로
+        전환하면 서버 저장과 중복 지원 방지 흐름을 함께 검증할 수 있습니다.
       </p>
 
       <form className="mt-5 space-y-3" onSubmit={handleSubmit}>

@@ -1,6 +1,6 @@
 # 03. API Reference
 
-현재 MVP는 실제 DB 기반 서비스가 아니라 mock 중심 데모 앱이다. 다만 프론트와 문서 흐름을 맞추기 위해 Next.js Route Handler 형태의 API 계약을 정의한다.
+현재 앱은 기본적으로 mock 중심 데모 앱이지만, `RECRUIT_DATA_SOURCE=database`일 때는 PostgreSQL + Prisma를 사용하도록 scaffold가 준비되어 있다. 프론트와 문서 흐름을 맞추기 위해 Next.js Route Handler 형태의 API 계약을 정의한다.
 
 ## 1) 공통 규칙
 
@@ -130,15 +130,17 @@ Success:
   "data": {
     "id": "mock_post_1710150000",
     "slug": "campus-app-launch-project",
-    "message": "mock 게시글이 생성되었습니다."
+    "dataSource": "mock",
+    "message": "모집글이 생성되었습니다."
   }
 }
 ```
 
 참고:
 
-- 서버는 mock 성공 응답만 보장한다.
-- 실제 목록 반영은 클라이언트가 localStorage에 저장한 데이터로 처리한다.
+- `dataSource`는 현재 저장 모드가 `mock`인지 `database`인지 알려준다.
+- `mock` 모드에서는 클라이언트 localStorage fallback과 함께 동작한다.
+- `database` 모드에서는 PostgreSQL이 source of truth가 된다.
 
 ### `POST /api/posts/{slug}/apply`
 
@@ -160,6 +162,7 @@ Success:
   "data": {
     "applicationId": "apply_1710151111",
     "postSlug": "ai-study-sprint",
+    "dataSource": "mock",
     "message": "지원이 접수되었습니다. 팀장이 확인 후 연락할 예정입니다."
   }
 }
@@ -180,5 +183,5 @@ Success:
 ## 5) 오픈 이슈
 
 - [ ] 실제 서비스 전환 시 인증 방식을 어떻게 추가할지
-- [ ] localStorage 데이터를 서버 DB로 마이그레이션할 방식
+- [ ] localStorage fallback 데이터를 서버 DB로 마이그레이션할 방식
 - [ ] 학교 인증, 신고, 관리자 기능을 어떤 API 단위로 확장할지

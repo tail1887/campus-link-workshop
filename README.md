@@ -41,8 +41,8 @@
 ## 아키텍처 요약
 
 - 클라이언트: Next.js App Router
-- 서버: Next.js Route Handlers 기반 mock API
-- 데이터 저장소: seed 데이터 + 브라우저 localStorage
+- 서버: Next.js Route Handlers + repository layer
+- 데이터 저장소: 기본 mock seed + localStorage, 선택적으로 PostgreSQL + Prisma
 - 인증 / 상태 관리: 인증 없음, 클라이언트 상태 중심
 - 배포 방식: Vercel
 
@@ -51,8 +51,8 @@
 | 영역 | 사용 기술 |
 | --- | --- |
 | Frontend | Next.js 16, React 19, TypeScript, Tailwind CSS 4 |
-| Backend | Next.js Route Handlers |
-| Database | 없음, mock seed + localStorage |
+| Backend | Next.js Route Handlers, Prisma |
+| Database | PostgreSQL scaffold + mock seed + localStorage fallback |
 | Infra | Vercel |
 | Testing | ESLint, Next build smoke check |
 
@@ -68,7 +68,18 @@ npm run dev
 - App: `http://localhost:3000`
 - API: `http://localhost:3000/api`
 
-### 2) 검증
+### 2) PostgreSQL 전환 시작
+
+```bash
+cp .env.example .env
+npm run db:generate
+npm run db:push
+```
+
+- 기본값은 `RECRUIT_DATA_SOURCE="mock"` 입니다.
+- PostgreSQL을 실제로 쓰려면 `.env`에서 `DATABASE_URL`을 채우고 `RECRUIT_DATA_SOURCE="database"`로 바꿔야 합니다.
+
+### 3) 검증
 
 ```bash
 npm run lint
@@ -78,7 +89,7 @@ npm run build
 ## 배포 메모
 
 - GitHub 저장소를 Vercel에 Import 하면 바로 배포 가능
-- MVP 기준 별도 환경 변수 없음
+- PostgreSQL 모드 배포 시에는 `DATABASE_URL`, `RECRUIT_DATA_SOURCE` 환경 변수가 필요
 - GitHub Repository: [tail1887/campus-link-workshop](https://github.com/tail1887/campus-link-workshop)
 
 ## 프로젝트 문서
@@ -100,4 +111,5 @@ npm run build
 ## Known Limitations
 
 - 실제 회원가입, 학교 인증, 실시간 채팅은 아직 없다.
-- localStorage 기반이라 기기나 브라우저를 바꾸면 작성/지원 내역이 공유되지 않는다.
+- 현재 기본 동작은 여전히 mock 저장소 기반이며, PostgreSQL 모드는 scaffold만 준비된 상태다.
+- localStorage 기반 fallback이라 기기나 브라우저를 바꾸면 작성/지원 내역이 공유되지 않는다.

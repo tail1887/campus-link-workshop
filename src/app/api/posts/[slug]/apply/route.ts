@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { createRuntimeApplication } from "@/lib/recruit";
 import {
-  createMockApplication,
-  findMockPost,
-  hasMockDuplicateApplication,
-} from "@/lib/server/mock-recruit-repository";
+  createRecruitApplication,
+  findRecruitPost,
+  getRecruitDataSource,
+  hasDuplicateApplication,
+} from "@/lib/server/recruit-repository";
 import type { CreateRecruitApplicationInput } from "@/types/recruit";
 
 type RouteContext = {
@@ -14,7 +14,7 @@ type RouteContext = {
 export async function POST(request: Request, context: RouteContext) {
   const { slug } = await context.params;
   const body = (await request.json()) as Partial<CreateRecruitApplicationInput>;
-  const post = findMockPost(slug);
+  const post = await findRecruitPost(slug);
 
   if (!post) {
     return NextResponse.json(
@@ -42,7 +42,7 @@ export async function POST(request: Request, context: RouteContext) {
     );
   }
 
-  if (hasMockDuplicateApplication(slug, body.contact)) {
+  if (await hasDuplicateApplication(slug, body.contact)) {
     return NextResponse.json(
       {
         success: false,
@@ -55,14 +55,12 @@ export async function POST(request: Request, context: RouteContext) {
     );
   }
 
-  const application = createRuntimeApplication({
+  const application = await createRecruitApplication({
     postSlug: slug,
     name: body.name,
     contact: body.contact,
     message: body.message,
   });
-
-  createMockApplication(application);
 
   return NextResponse.json(
     {
@@ -70,7 +68,11 @@ export async function POST(request: Request, context: RouteContext) {
       data: {
         applicationId: application.id,
         postSlug: slug,
-        message: "지원이 접수되었습니다. 팀장이 확인 후 연락할 예정입니다.",
+        dataSource: getRecruitDataSource(),
+        message:
+          getRecruitDataSource() === "database"
+            ? "지원이 데이터베이스에 접수되었습니다. 팀장이 확인 후 연락할 예정입니다."
+            : "지원이 접수되었습니다. 팀장이 확인 후 연락할 예정입니다.",
       },
     },
     { status: 202 },

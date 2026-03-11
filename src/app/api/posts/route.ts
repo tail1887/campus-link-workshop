@@ -1,19 +1,24 @@
 import { NextResponse } from "next/server";
 import {
   buildSlugFromTitle,
-  createRuntimeRecruitPost,
   filterPosts,
 } from "@/lib/recruit";
-import { createMockPost, listMockPosts } from "@/lib/server/mock-recruit-repository";
+import {
+  createRecruitPost,
+  getRecruitDataSource,
+  listRecruitPosts,
+} from "@/lib/server/recruit-repository";
 import type { CreateRecruitPostInput, RecruitCategory } from "@/types/recruit";
 
-export function GET(request: Request) {
+export const dynamic = "force-dynamic";
+
+export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const category = searchParams.get("category");
   const campus = searchParams.get("campus");
   const q = searchParams.get("q");
 
-  const posts = filterPosts(listMockPosts(), {
+  const posts = filterPosts(await listRecruitPosts(), {
     category:
       category === "study" || category === "project" || category === "hackathon"
         ? (category as RecruitCategory)
@@ -55,7 +60,7 @@ export async function POST(request: Request) {
   }
 
   const slug = buildSlugFromTitle(body.title);
-  const runtimePost = createRuntimeRecruitPost({
+  const createdPost = await createRecruitPost({
     category: body.category,
     title: body.title,
     campus: body.campus,
@@ -74,15 +79,17 @@ export async function POST(request: Request) {
     slug,
   });
 
-  createMockPost(runtimePost);
-
   return NextResponse.json(
     {
       success: true,
       data: {
-        id: runtimePost.id,
-        slug: runtimePost.slug,
-        message: "mock 게시글이 생성되었습니다.",
+        id: createdPost.id,
+        slug: createdPost.slug,
+        dataSource: getRecruitDataSource(),
+        message:
+          getRecruitDataSource() === "database"
+            ? "모집글이 데이터베이스에 저장되었습니다."
+            : "모집글이 mock 저장소에 생성되었습니다.",
       },
     },
     { status: 201 },

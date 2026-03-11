@@ -13,8 +13,9 @@ export default function RecruitCreatePage() {
               바로 발표하세요.
             </h1>
             <p className="section-subtitle">
-              필수 항목만 입력해도 mock 모집글이 생성됩니다. 생성된 글은 현재
-              브라우저에 저장되므로 배포 환경에서도 바로 시연할 수 있습니다.
+          필수 항목만 입력해도 모집글이 생성됩니다. 기본값은 mock 저장소
+          fallback으로 동작하고, PostgreSQL 모드로 전환하면 서버 저장으로
+          이어집니다.
             </p>
             <div className="info-grid">
               {[
