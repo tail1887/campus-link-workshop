@@ -61,21 +61,26 @@
 ### 1) 로컬 실행
 
 ```bash
+nvm install 24
+nvm use
 npm install
 npm run dev
 ```
 
 - App: `http://localhost:3000`
 - API: `http://localhost:3000/api`
+- macOS/Linux 팀원은 루트의 `.nvmrc` 기준으로 Node.js 24를 맞추면 됩니다.
+- `npm install` 뒤에는 `postinstall`로 Prisma Client가 자동 생성되므로, 새 Mac 환경에서도 바로 타입 체크와 빌드가 안정적으로 맞춰집니다.
+- 기본 실행 모드는 `RECRUIT_DATA_SOURCE="mock"` 이라서 로컬 PostgreSQL이나 `.env` 없이도 바로 화면 확인이 가능합니다.
 
 ### 2) PostgreSQL 전환 시작
 
 ```bash
-cp .env.example .env
 npm run db:generate
 npm run db:push
 ```
 
+- 먼저 `.env.example`을 복사해 `.env`를 만든 뒤 값을 채워 주세요.
 - 기본값은 `RECRUIT_DATA_SOURCE="mock"` 입니다.
 - PostgreSQL을 실제로 쓰려면 `.env`에서 `DATABASE_URL`을 채우고 `RECRUIT_DATA_SOURCE="database"`로 바꿔야 합니다.
 - 스키마 변경을 배포 환경에 반영할 때는 `npm run db:deploy`를 사용합니다.
