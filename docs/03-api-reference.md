@@ -188,6 +188,18 @@ Success:
 {
   "success": false,
   "error": {
+    "code": "AUTH_ENTRY_REQUIRED",
+    "message": "글쓰기 전에 로그인 또는 회원가입으로 세션을 시작해주세요."
+  }
+}
+```
+
+기존 실패 예시:
+
+```json
+{
+  "success": false,
+  "error": {
     "code": "DUPLICATE_APPLICATION",
     "message": "이미 같은 연락처로 지원한 기록이 있습니다."
   }
