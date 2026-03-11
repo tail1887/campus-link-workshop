@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AuthControls } from "@/components/auth-controls";
 
 export function SiteHeader() {
   return (
@@ -38,16 +39,15 @@ export function SiteHeader() {
             >
               글쓰기
             </Link>
+            <Link
+              href="/login"
+              className="text-sm font-semibold text-[color:var(--muted)] hover:text-slate-950"
+            >
+              로그인
+            </Link>
           </nav>
 
-          <div className="flex items-center gap-2">
-            <Link href="/recruit" className="button-secondary px-4 py-3 text-sm">
-              둘러보기
-            </Link>
-            <Link href="/recruit/new" className="button-primary px-4 py-3 text-sm">
-              시작하기
-            </Link>
-          </div>
+          <AuthControls />
         </div>
       </div>
     </header>

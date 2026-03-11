@@ -30,6 +30,9 @@ export default async function HomePage() {
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
+              <Link href="/signup" className="button-primary">
+                학교 이메일로 시작하기
+              </Link>
               <Link href="/recruit" className="button-primary">
                 모집글 둘러보기
                 <span aria-hidden="true">/</span>

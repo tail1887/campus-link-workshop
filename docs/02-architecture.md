@@ -9,6 +9,7 @@
 | Mock API | Next.js Route Handlers | 별도 서버 없이도 API 형태를 흉내 내며 데모 흐름과 문서 일관성을 맞출 수 있다. | 프론트엔드 전용 상태 관리 |
 | Database Layer | Prisma + PostgreSQL | 실제 서비스 전환 시 repository contract를 유지하면서 관계형 데이터 모델을 확장하기 쉽다. | MongoDB |
 | Demo Storage | 브라우저 localStorage fallback | DB 환경 변수가 없을 때도 발표용 흐름을 유지할 수 있다. | IndexedDB |
+| Auth Foundation | 브라우저 localStorage 기반 mock session | 로그인/회원가입 화면과 세션 UX를 먼저 맞추고, 이후 실제 인증으로 교체하기 쉽다. | NextAuth, Supabase Auth |
 | Infra | Vercel | Next.js 기본 배포 플랫폼이며 워크숍 시연에 적합하다. | Netlify |
 
 ## 2) 시스템 구성
@@ -29,12 +30,13 @@ flowchart LR
 - API 역할: 목록/상세 조회와 생성/지원 응답 제공
 - Repository 역할: `RECRUIT_DATA_SOURCE` 값에 따라 PostgreSQL 또는 mock 저장소를 선택
 - 데이터 저장 방식: 기본값은 seed 데이터와 localStorage fallback, DB 모드에서는 Prisma를 통해 PostgreSQL 사용
+- 인증 저장 방식: 로그인 세션과 mock 가입 정보는 브라우저 localStorage에 저장하며, 이후 실제 세션 레이어로 교체 가능한 UI 기반을 유지한다
 
 ## 3) 레이어 구조
 
 - App Router Page: 경로별 화면 구성
 - UI Components: 카드, 배지, 헤더, 폼, CTA 등 재사용 컴포넌트
-- Feature Layer: 모집글 목록 필터링, 글쓰기, 지원하기 흐름
+- Feature Layer: 모집글 목록 필터링, 글쓰기, 지원하기, 로그인/회원가입 흐름
 - Recruit Repository: Prisma/PostgreSQL과 mock 저장소를 전환하는 유틸
 - Route Handlers: `/api/posts`, `/api/posts/[slug]`, `/api/posts/[slug]/apply` 등 API 응답
 
@@ -46,7 +48,9 @@ prisma/
 src/
 ├─ app/
 │  ├─ api/
+│  ├─ login/
 │  ├─ recruit/
+│  ├─ signup/
 │  └─ page.tsx
 ├─ components/
 ├─ data/
