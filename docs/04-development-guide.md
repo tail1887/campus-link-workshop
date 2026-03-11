@@ -74,6 +74,7 @@
 - PR이 `main`으로 들어오면 GitHub Actions가 자동으로 `npm run lint`, `npm run build`를 실행한다.
 - PR이 열리거나 갱신되면 GitHub Actions가 해당 브랜치에 `main` 최신 내용을 자동 병합 시도한다.
 - `main` 머지 후 push가 발생하면 CI 성공을 확인한 뒤 Vercel 프로덕션 배포를 자동 실행한다.
+- 프로덕션 배포 직전에는 `npm run db:deploy`가 실행되어 Prisma migration을 먼저 반영한다.
 - 배포 워크플로는 GitHub Secrets의 `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`를 사용한다.
 
 ## 5) Codex 기준 구현 순서
@@ -112,6 +113,7 @@
 
 - Smoke Test: 메인 > 목록 > 상세 > 지원하기 > 글쓰기 흐름이 브라우저에서 이어지는지 확인
 - DB Setup Test: `npm run db:generate`
+- Migration Test: `npm run db:deploy`
 - Lint Test: `npm run lint`
 - Build Test: `npm run build`
 - 브랜치별 자동/수동 테스트 분리 원칙은 `docs/06-testing-playbook.md`를 따른다.
