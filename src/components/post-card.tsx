@@ -47,11 +47,11 @@ export function PostCard({
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
             {post.campus}
           </p>
-          <h3 className="mobile-clamp-2 text-lg font-semibold leading-7 text-slate-950 group-hover:text-[color:var(--accent-strong)] sm:text-xl sm:leading-8">
+          <h3 className="mobile-clamp-2 break-words text-lg font-semibold leading-7 text-slate-950 [overflow-wrap:anywhere] group-hover:text-[color:var(--accent-strong)] sm:text-xl sm:leading-8">
             {post.title}
           </h3>
         </div>
-        <p className="mobile-clamp-2 text-sm leading-6 text-[color:var(--muted)] sm:leading-7">
+        <p className="mobile-clamp-2 break-words text-sm leading-6 text-[color:var(--muted)] [overflow-wrap:anywhere] sm:leading-7">
           {post.summary}
         </p>
       </div>

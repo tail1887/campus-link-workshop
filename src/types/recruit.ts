@@ -16,8 +16,10 @@ export type RecruitPost = {
   stage: string;
   deadline: string;
   createdAt: string;
+  updatedAt?: string;
   highlight: boolean;
   ownerId?: string | null;
+  deletedAt?: string | null;
   ownerName: string;
   ownerRole: string;
   meetingStyle: string;

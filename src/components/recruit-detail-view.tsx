@@ -7,8 +7,20 @@ import { ApplyPanel } from "@/components/apply-panel";
 import { buildAvatarDataUrl } from "@/lib/avatar";
 import { getRecruitAuthorProfileHref } from "@/lib/public-profile";
 import { getRecruitCreateEntry } from "@/lib/recruit-create-entry";
-import { categoryMeta, formatDateLabel, formatDateTimeLabel } from "@/lib/recruit";
-import { getStoredApplications, getStoredPosts } from "@/lib/storage";
+import {
+  categoryMeta,
+  closeRecruitPost,
+  deleteRecruitPost,
+  formatDateLabel,
+  formatDateTimeLabel,
+  isRecruitPostClosed,
+} from "@/lib/recruit";
+import {
+  getStoredApplicationCountByPost,
+  getStoredPosts,
+  RECRUIT_STORAGE_SYNC_EVENT,
+  updateStoredPost,
+} from "@/lib/storage";
 import type { RecruitPost } from "@/types/recruit";
 
 type RecruitDetailViewProps = {
@@ -31,25 +43,32 @@ export function RecruitDetailView({
   const [post, setPost] = useState<RecruitPost | null>(initialPost);
   const [hydrated, setHydrated] = useState(false);
   const [localApplyCount, setLocalApplyCount] = useState(0);
+  const isOwner = Boolean(currentUser && post?.ownerId === currentUser.id);
   const createEntry = getRecruitCreateEntry(currentUser !== null);
 
   useEffect(() => {
     const sync = () => {
       const localPost =
         getStoredPosts().find((item) => item.slug === slug) ?? initialPost;
-      const applications = getStoredApplications().filter(
-        (item) => item.postSlug === slug,
-      );
 
-      setPost(localPost ?? null);
-      setLocalApplyCount(applications.length);
+      setPost(localPost?.deletedAt ? null : (localPost ?? null));
+      setLocalApplyCount(getStoredApplicationCountByPost(slug));
       setHydrated(true);
     };
 
     sync();
     window.addEventListener("storage", sync);
-    return () => window.removeEventListener("storage", sync);
+    window.addEventListener(RECRUIT_STORAGE_SYNC_EVENT, sync);
+    return () => {
+      window.removeEventListener("storage", sync);
+      window.removeEventListener(RECRUIT_STORAGE_SYNC_EVENT, sync);
+    };
   }, [initialPost, slug]);
+
+  const handleManagedPostChange = (nextPost: RecruitPost) => {
+    updateStoredPost(nextPost);
+    setPost(nextPost.deletedAt ? null : nextPost);
+  };
 
   if (!hydrated && !post) {
     return (
@@ -139,8 +158,12 @@ export function RecruitDetailView({
             </div>
 
             <div className="space-y-4">
-              <h1 className="section-title text-slate-950">{post.title}</h1>
-              <p className="section-subtitle max-w-3xl">{post.summary}</p>
+              <h1 className="section-title break-words text-slate-950 [overflow-wrap:anywhere]">
+                {post.title}
+              </h1>
+              <p className="section-subtitle max-w-3xl break-words [overflow-wrap:anywhere]">
+                {post.summary}
+              </p>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -157,7 +180,9 @@ export function RecruitDetailView({
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
                     {item.label}
                   </p>
-                  <p className="mt-2 font-semibold text-slate-950">{item.value}</p>
+                  <p className="mt-2 break-words font-semibold text-slate-950 [overflow-wrap:anywhere]">
+                    {item.value}
+                  </p>
                 </div>
               ))}
             </div>
@@ -167,7 +192,7 @@ export function RecruitDetailView({
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
                   Team Goal
                 </p>
-                <p className="mt-3 text-xl font-semibold text-slate-950">
+                <p className="mt-3 break-words text-xl font-semibold text-slate-950 [overflow-wrap:anywhere]">
                   {post.goal}
                 </p>
                 <p className="mt-4 whitespace-pre-line text-sm leading-8 text-[color:var(--muted)]">
@@ -272,10 +297,39 @@ export function RecruitDetailView({
                   <p>{formatDateTimeLabel(post.createdAt)}</p>
                 </div>
                 <div className="rounded-[1.25rem] bg-white/82 px-4 py-3">
-                  <span className="font-semibold text-slate-900">로컬 지원 수</span>
+                  <span className="font-semibold text-slate-900">현재 지원 수</span>
                   <p>{localApplyCount}건</p>
                 </div>
               </div>
+              {isOwner && post ? (
+                <div className="mt-5 grid gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleManagedPostChange(
+                        isRecruitPostClosed(post)
+                          ? {
+                              ...post,
+                              stage: initialPost?.stage ?? "모집 중",
+                              updatedAt: new Date().toISOString(),
+                              deletedAt: null,
+                            }
+                          : closeRecruitPost(post),
+                      )
+                    }
+                    className="button-secondary w-full justify-center"
+                  >
+                    {isRecruitPostClosed(post) ? "모집 재개" : "모집 마감"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleManagedPostChange(deleteRecruitPost(post))}
+                    className="button-ghost w-full justify-center text-rose-600"
+                  >
+                    모집글 삭제
+                  </button>
+                </div>
+              ) : null}
               <Link href={authorProfileHref} className="button-ghost mt-5 w-full justify-center">
                 작성자 프로필 보기
               </Link>

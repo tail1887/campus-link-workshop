@@ -3,6 +3,7 @@ import type { RecruitApplication, RecruitPost } from "@/types/recruit";
 
 const POSTS_KEY = "campus-link.posts.v1";
 const APPLICATIONS_KEY = "campus-link.applications.v1";
+export const RECRUIT_STORAGE_SYNC_EVENT = "campus-link:storage-sync";
 
 function isBrowser() {
   return typeof window !== "undefined";
@@ -32,6 +33,7 @@ function writeArray<T>(key: string, items: T[]) {
   }
 
   window.localStorage.setItem(key, JSON.stringify(items));
+  window.dispatchEvent(new CustomEvent(RECRUIT_STORAGE_SYNC_EVENT, { detail: key }));
 }
 
 export function getStoredPosts() {
@@ -47,6 +49,11 @@ export function getStoredPosts() {
 
 export function addStoredPost(post: RecruitPost) {
   const nextPosts = mergePosts([post], getStoredPosts());
+  writeArray(POSTS_KEY, nextPosts);
+}
+
+export function updateStoredPost(post: RecruitPost) {
+  const nextPosts = mergePosts([post], getStoredPosts().filter((item) => item.slug !== post.slug));
   writeArray(POSTS_KEY, nextPosts);
 }
 
@@ -67,4 +74,9 @@ export function getStoredApplicationsByApplicant(applicantId: string) {
   return getStoredApplications().filter(
     (application) => application.applicantId === applicantId,
   );
+}
+
+export function getStoredApplicationCountByPost(postSlug: string) {
+  return getStoredApplications().filter((application) => application.postSlug === postSlug)
+    .length;
 }
