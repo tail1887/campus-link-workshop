@@ -33,6 +33,73 @@ enum OnboardingStep {
   complete
 }
 
+enum CollaborationStyle {
+  async_first
+  hybrid
+  live_sprint
+  flexible
+}
+
+enum WeeklyHoursBand {
+  under_3
+  three_to_six
+  six_to_ten
+  ten_plus
+  flexible
+}
+
+enum ExternalLinkType {
+  portfolio
+  github
+  linkedin
+  blog
+  other
+}
+
+enum ResumeVisibility {
+  private
+  shared
+}
+
+enum VerificationStatus {
+  unverified
+  pending
+  verified
+  rejected
+}
+
+enum VerificationBadge {
+  none
+  pending
+  verified
+}
+
+enum VerificationMethod {
+  campus_email
+  student_card
+  manual_review
+}
+
+enum InquiryCategory {
+  general
+  account
+  verification
+  resume
+  report
+}
+
+enum InquiryStatus {
+  open
+  in_review
+  resolved
+}
+
+enum AlertDigestFrequency {
+  off
+  daily
+  weekly
+}
+
 enum ApplicationStatus {
   pending
   reviewed
@@ -51,6 +118,11 @@ model User {
   updatedAt       DateTime          @updatedAt
   sessions        Session[]
   onboardingState OnboardingState?
+  profile         Profile?
+  resume          Resume?
+  verification    Verification?
+  inquiries       Inquiry[]
+  alertPreference AlertPreference?
   recruitPosts    RecruitPost[]
   applications    RecruitApplication[]
 }
@@ -74,6 +146,87 @@ model OnboardingState {
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
   user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Profile {
+  userId              String              @id
+  headline            String
+  intro               String
+  collaborationStyle  CollaborationStyle?
+  weeklyHours         WeeklyHoursBand?
+  contactEmail        String?
+  openToRoles         String[]
+  links               Json
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Resume {
+  userId      String           @id
+  title       String
+  summary     String
+  skills      String[]
+  education   String
+  experience  Json
+  projects    Json
+  links       Json
+  visibility  ResumeVisibility @default(private)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Verification {
+  userId           String             @id
+  status           VerificationStatus @default(unverified)
+  badge            VerificationBadge  @default(none)
+  method           VerificationMethod?
+  evidenceLabel    String?
+  evidenceUrl      String?
+  note             String?
+  submittedAt      DateTime?
+  reviewedAt       DateTime?
+  verifiedAt       DateTime?
+  rejectionReason  String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Inquiry {
+  id                 String          @id @default(cuid())
+  userId             String
+  category           InquiryCategory
+  subject            String
+  message            String
+  contactEmail       String
+  status             InquiryStatus   @default(open)
+  resolutionSummary  String?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  resolvedAt         DateTime?
+  user               User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+
+model AlertPreference {
+  userId               String               @id
+  emailEnabled         Boolean              @default(true)
+  inAppEnabled         Boolean              @default(true)
+  applicationUpdates   Boolean              @default(true)
+  verificationUpdates  Boolean              @default(true)
+  inquiryReplies       Boolean              @default(true)
+  marketingEnabled     Boolean              @default(false)
+  digestFrequency      AlertDigestFrequency @default(weekly)
+  quietHoursStart      String?
+  quietHoursEnd        String?
+  quietHoursTimezone   String?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  user                 User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model RecruitPost {
