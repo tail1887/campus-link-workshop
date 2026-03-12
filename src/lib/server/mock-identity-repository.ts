@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import {
   buildAuthenticatedAuthContext,
   createInitialOnboardingState,
@@ -20,6 +22,12 @@ import type {
 type StoredMockUser = {
   user: User;
   passwordHash: string;
+};
+
+type PersistedMockIdentityState = {
+  users: StoredMockUser[];
+  onboardingStates: OnboardingState[];
+  sessions: Session[];
 };
 
 function createSeedAccount(input: {
@@ -65,7 +73,7 @@ const seedOnboardingStates = [
   }),
 ];
 
-const mockUsers = new Map<string, StoredMockUser>(
+const seedUsers = new Map<string, StoredMockUser>(
   [
     createSeedAccount({
       id: "user_demo_student",
@@ -88,11 +96,82 @@ const mockUsers = new Map<string, StoredMockUser>(
   ].map((record) => [record.user.id, record]),
 );
 
-const mockOnboardingStates = new Map<string, OnboardingState>(
+const seedOnboardingStateMap = new Map<string, OnboardingState>(
   seedOnboardingStates.map((state) => [state.userId, state]),
 );
 
-const mockSessions = new Map<string, Session>();
+const devPersistenceEnabled = process.env.NODE_ENV === "development";
+const devPersistencePath = join(
+  process.cwd(),
+  ".local",
+  "mock-identity-state.json",
+);
+
+function loadPersistedMockState(): PersistedMockIdentityState | null {
+  if (!devPersistenceEnabled) {
+    return null;
+  }
+
+  try {
+    const raw = readFileSync(devPersistencePath, "utf8");
+    return JSON.parse(raw) as PersistedMockIdentityState;
+  } catch {
+    return null;
+  }
+}
+
+function createInitialMockState() {
+  const users = new Map(seedUsers);
+  const onboardingStates = new Map(seedOnboardingStateMap);
+  const sessions = new Map<string, Session>();
+  const persisted = loadPersistedMockState();
+
+  if (persisted) {
+    for (const storedUser of persisted.users) {
+      users.set(storedUser.user.id, storedUser);
+    }
+
+    for (const onboardingState of persisted.onboardingStates) {
+      onboardingStates.set(onboardingState.userId, onboardingState);
+    }
+
+    for (const session of persisted.sessions) {
+      sessions.set(session.id, session);
+    }
+  }
+
+  return {
+    users,
+    onboardingStates,
+    sessions,
+  };
+}
+
+function persistMockState() {
+  if (!devPersistenceEnabled) {
+    return;
+  }
+
+  mkdirSync(dirname(devPersistencePath), { recursive: true });
+  writeFileSync(
+    devPersistencePath,
+    JSON.stringify(
+      {
+        users: [...mockUsers.values()],
+        onboardingStates: [...mockOnboardingStates.values()],
+        sessions: [...mockSessions.values()],
+      } satisfies PersistedMockIdentityState,
+      null,
+      2,
+    ),
+    "utf8",
+  );
+}
+
+const initialState = createInitialMockState();
+const mockUsers = initialState.users;
+const mockOnboardingStates = initialState.onboardingStates;
+const mockSessions = initialState.sessions;
 
 function getStoredUserByEmail(email: string) {
   const normalizedEmail = normalizeEmail(email);
@@ -170,6 +249,7 @@ export function createMockIdentityUser(
 
   mockUsers.set(user.id, stored);
   mockOnboardingStates.set(user.id, onboarding);
+  persistMockState();
 
   return {
     user,
@@ -187,11 +267,13 @@ export function createMockIdentitySession(userId: string): Session {
   };
 
   mockSessions.set(session.id, session);
+  persistMockState();
   return session;
 }
 
 export function deleteMockIdentitySession(sessionId: string) {
   mockSessions.delete(sessionId);
+  persistMockState();
 }
 
 export function getMockAuthContextBySessionId(
@@ -205,6 +287,7 @@ export function getMockAuthContextBySessionId(
 
   if (isExpired(session)) {
     mockSessions.delete(sessionId);
+    persistMockState();
     return null;
   }
 
@@ -212,6 +295,7 @@ export function getMockAuthContextBySessionId(
 
   if (!stored) {
     mockSessions.delete(sessionId);
+    persistMockState();
     return null;
   }
 
@@ -229,5 +313,6 @@ export function getMockOnboardingStateByUserId(userId: string) {
 
 export function updateMockOnboardingState(state: OnboardingState) {
   mockOnboardingStates.set(state.userId, state);
+  persistMockState();
   return state;
 }

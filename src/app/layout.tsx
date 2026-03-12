@@ -10,6 +10,8 @@ import {
 } from "@/lib/site-config";
 import "./globals.css";
 
+export const dynamic = "force-dynamic";
+
 const bodyFont = Noto_Sans_KR({
   variable: "--font-body",
   subsets: ["latin"],

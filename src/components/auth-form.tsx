@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
   getDefaultAuthEntryNextPath,
@@ -45,7 +44,6 @@ const copyByMode = {
 } as const;
 
 export function AuthForm({ mode, nextPath, dataSource }: AuthFormProps) {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -102,6 +100,7 @@ export function AuthForm({ mode, nextPath, dataSource }: AuthFormProps) {
     startTransition(async () => {
       const response = await fetch(copy.endpoint, {
         method: "POST",
+        credentials: "same-origin",
         headers: {
           "Content-Type": "application/json",
         },
@@ -131,8 +130,7 @@ export function AuthForm({ mode, nextPath, dataSource }: AuthFormProps) {
         return;
       }
 
-      router.push(resolvedNextPath);
-      router.refresh();
+      window.location.assign(resolvedNextPath);
     });
   };
 

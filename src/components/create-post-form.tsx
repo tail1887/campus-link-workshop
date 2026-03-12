@@ -427,16 +427,17 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
   };
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(420px,0.95fr)]">
-      <form onSubmit={submit} className="panel rounded-[1.8rem] p-5 sm:p-6 lg:p-7">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
-                Write Form
-              </p>
-            <h2 className="mt-2 text-2xl font-semibold text-slate-950">
-              모집글 입력
-            </h2>
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1.18fr)_minmax(360px,0.82fr)] lg:items-start">
+      <form onSubmit={submit} className="panel rounded-[2rem] p-5 sm:p-6 lg:p-7">
+        <div className="flex flex-col gap-4 border-b border-slate-200/70 pb-5 sm:flex-row sm:items-end sm:justify-between">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
+              Write Form
+            </p>
+            <h2 className="text-2xl font-semibold text-slate-950">모집글 입력</h2>
+            <p className="text-sm leading-7 text-[color:var(--muted)]">
+              필수 정보부터 팀 운영 방식까지 왼쪽에서 완성하고, 오른쪽 AI 초안에서 바로 다듬을 수 있습니다.
+            </p>
           </div>
           <button
             type="button"
@@ -451,7 +452,13 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
           </button>
         </div>
 
-        <div className="mt-5 grid gap-4">
+        <div className="mt-5 space-y-5">
+          <section className="rounded-[1.5rem] border border-slate-200/80 bg-white/68 p-4 sm:p-5">
+            <div className="mb-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                기본 정보
+              </p>
+            </div>
           <div className="grid gap-4 lg:grid-cols-2">
             <label className="space-y-2 text-sm font-semibold text-slate-800">
               모집 유형
@@ -487,67 +494,83 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
               />
             </label>
           </div>
+          </section>
 
-          <label className="space-y-2 text-sm font-semibold text-slate-800">
-            제목
-            <input
-              value={draft.title}
-              onChange={(event) =>
-                updateField(
-                  "title",
-                  limitText(event.target.value, recruitPostFieldLimits.title),
-                )
-              }
-              className="field"
-              placeholder="예: AI 서비스 팀원 모집"
-              maxLength={recruitPostFieldLimits.title}
-            />
-            <CharacterCount
-              value={draft.title}
-              maxLength={recruitPostFieldLimits.title}
-            />
-          </label>
+          <section className="rounded-[1.5rem] border border-slate-200/80 bg-white/68 p-4 sm:p-5">
+            <div className="mb-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                메시지 구성
+              </p>
+            </div>
+            <div className="grid gap-4">
+              <label className="space-y-2 text-sm font-semibold text-slate-800">
+                제목
+                <input
+                  value={draft.title}
+                  onChange={(event) =>
+                    updateField(
+                      "title",
+                      limitText(event.target.value, recruitPostFieldLimits.title),
+                    )
+                  }
+                  className="field"
+                  placeholder="예: AI 서비스 팀원 모집"
+                  maxLength={recruitPostFieldLimits.title}
+                />
+                <CharacterCount
+                  value={draft.title}
+                  maxLength={recruitPostFieldLimits.title}
+                />
+              </label>
 
-          <label className="space-y-2 text-sm font-semibold text-slate-800">
-            카드 요약
-            <textarea
-              value={draft.summary}
-              onChange={(event) =>
-                updateField(
-                  "summary",
-                  limitText(event.target.value, recruitPostFieldLimits.summary),
-                )
-              }
-              className="field textarea min-h-[110px]"
-              placeholder="목록 카드에 보일 한 줄 설명"
-              maxLength={recruitPostFieldLimits.summary}
-            />
-            <CharacterCount
-              value={draft.summary}
-              maxLength={recruitPostFieldLimits.summary}
-            />
-          </label>
+              <label className="space-y-2 text-sm font-semibold text-slate-800">
+                카드 요약
+                <textarea
+                  value={draft.summary}
+                  onChange={(event) =>
+                    updateField(
+                      "summary",
+                      limitText(event.target.value, recruitPostFieldLimits.summary),
+                    )
+                  }
+                  className="field textarea min-h-[120px]"
+                  placeholder="목록 카드에 보일 한 줄 설명"
+                  maxLength={recruitPostFieldLimits.summary}
+                />
+                <CharacterCount
+                  value={draft.summary}
+                  maxLength={recruitPostFieldLimits.summary}
+                />
+              </label>
 
-          <label className="space-y-2 text-sm font-semibold text-slate-800">
-            상세 설명
-            <textarea
-              value={draft.description}
-              onChange={(event) =>
-                updateField(
-                  "description",
-                  limitText(event.target.value, recruitPostFieldLimits.description),
-                )
-              }
-              className="field textarea"
-              placeholder="팀이 어떤 목표를 가지고 있고 어떤 사람을 찾는지 적어주세요"
-              maxLength={recruitPostFieldLimits.description}
-            />
-            <CharacterCount
-              value={draft.description}
-              maxLength={recruitPostFieldLimits.description}
-            />
-          </label>
+              <label className="space-y-2 text-sm font-semibold text-slate-800">
+                상세 설명
+                <textarea
+                  value={draft.description}
+                  onChange={(event) =>
+                    updateField(
+                      "description",
+                      limitText(event.target.value, recruitPostFieldLimits.description),
+                    )
+                  }
+                  className="field textarea"
+                  placeholder="팀이 어떤 목표를 가지고 있고 어떤 사람을 찾는지 적어주세요"
+                  maxLength={recruitPostFieldLimits.description}
+                />
+                <CharacterCount
+                  value={draft.description}
+                  maxLength={recruitPostFieldLimits.description}
+                />
+              </label>
+            </div>
+          </section>
 
+          <section className="rounded-[1.5rem] border border-slate-200/80 bg-white/68 p-4 sm:p-5">
+            <div className="mb-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                모집 조건
+              </p>
+            </div>
           <div className="grid gap-4 lg:grid-cols-2">
             <label className="space-y-2 text-sm font-semibold text-slate-800">
               모집 역할
@@ -588,7 +611,14 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
               />
             </label>
           </div>
+          </section>
 
+          <section className="rounded-[1.5rem] border border-slate-200/80 bg-white/68 p-4 sm:p-5">
+            <div className="mb-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                운영 정보
+              </p>
+            </div>
           <div className="grid gap-4 lg:grid-cols-3">
             <label className="space-y-2 text-sm font-semibold text-slate-800">
               모집 인원
@@ -630,7 +660,14 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
               />
             </label>
           </div>
+          </section>
 
+          <section className="rounded-[1.5rem] border border-slate-200/80 bg-white/68 p-4 sm:p-5">
+            <div className="mb-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                팀 운영
+              </p>
+            </div>
           <div className="grid gap-4 lg:grid-cols-2">
             <label className="space-y-2 text-sm font-semibold text-slate-800">
               팀장 이름
@@ -712,26 +749,34 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
               />
             </label>
           </div>
+          </section>
 
-          <label className="space-y-2 text-sm font-semibold text-slate-800">
-            이번 팀의 목표
-            <textarea
-              value={draft.goal}
-              onChange={(event) =>
-                updateField(
-                  "goal",
-                  limitText(event.target.value, recruitPostFieldLimits.goal),
-                )
-              }
-              className="field textarea min-h-[110px]"
-              placeholder="예: 3주 안에 배포 가능한 서비스 MVP 완성"
-              maxLength={recruitPostFieldLimits.goal}
-            />
-            <CharacterCount
-              value={draft.goal}
-              maxLength={recruitPostFieldLimits.goal}
-            />
-          </label>
+          <section className="rounded-[1.5rem] border border-slate-200/80 bg-white/68 p-4 sm:p-5">
+            <div className="mb-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--muted)]">
+                목표
+              </p>
+            </div>
+            <label className="space-y-2 text-sm font-semibold text-slate-800">
+              이번 팀의 목표
+              <textarea
+                value={draft.goal}
+                onChange={(event) =>
+                  updateField(
+                    "goal",
+                    limitText(event.target.value, recruitPostFieldLimits.goal),
+                  )
+                }
+                className="field textarea min-h-[120px]"
+                placeholder="예: 3주 안에 배포 가능한 서비스 MVP 완성"
+                maxLength={recruitPostFieldLimits.goal}
+              />
+              <CharacterCount
+                value={draft.goal}
+                maxLength={recruitPostFieldLimits.goal}
+              />
+            </label>
+          </section>
 
           {error ? (
             <div className="rounded-[1.25rem] bg-rose-50 px-4 py-3 text-sm font-medium text-rose-600">
@@ -754,8 +799,8 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
         </div>
       </form>
 
-      <div className="space-y-4">
-        <div className="panel rounded-[1.8rem] p-5 sm:p-6 lg:p-7">
+      <aside className="space-y-4 lg:sticky lg:top-28">
+        <div className="panel-strong rounded-[2rem] p-5 sm:p-6 lg:p-7">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
@@ -780,6 +825,43 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
               >
                 {isAssistPending ? "추천 생성 중..." : "추천 생성"}
               </button>
+            </div>
+          </div>
+
+          <div className="mt-5 rounded-[1.5rem] border border-slate-200/80 bg-white/84 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-slate-950">현재 초안 스냅샷</p>
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-600">
+                live
+              </span>
+            </div>
+            <div className="mt-4 space-y-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--muted)]">
+                  제목
+                </p>
+                <p className="mt-1 text-sm font-semibold leading-6 text-slate-950">
+                  {previewPost.title}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--muted)]">
+                  요약
+                </p>
+                <p className="mt-1 text-sm leading-6 text-[color:var(--muted)]">
+                  {previewPost.summary}
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {previewPost.roles.slice(0, 3).map((role) => (
+                  <span
+                    key={role}
+                    className="rounded-full border border-slate-200/80 bg-white px-3 py-1 text-xs font-semibold text-slate-700"
+                  >
+                    {role}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -882,7 +964,7 @@ export function CreatePostForm({ currentUser }: CreatePostFormProps) {
             </div>
           )}
         </div>
-      </div>
+      </aside>
     </div>
   );
 }
