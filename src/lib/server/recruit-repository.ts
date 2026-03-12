@@ -22,6 +22,7 @@ import {
 } from "@/lib/server/prisma-recruit-repository";
 import {
   getConfiguredDataSource,
+  logRepositoryFallback,
   withRepositoryFallback,
 } from "@/lib/server/repository-fallback";
 import type {
@@ -34,6 +35,10 @@ export type RecruitDataSource = "mock" | "database";
 
 export function getRecruitDataSource(): RecruitDataSource {
   return getConfiguredDataSource();
+}
+
+function getCanonicalRecruitPosts() {
+  return curateRecruitPosts(canonicalRecruitPosts);
 }
 
 function repairCorruptedSeedPosts(posts: RecruitPost[]) {
@@ -62,23 +67,39 @@ function repairCorruptedSeedPosts(posts: RecruitPost[]) {
 }
 
 export async function listRecruitPosts() {
-  const posts = await withRepositoryFallback({
-    scope: "recruit.listRecruitPosts",
-    database: () => listPrismaPosts(),
-    mock: () => listMockPosts(),
-  });
+  try {
+    const posts = await withRepositoryFallback({
+      scope: "recruit.listRecruitPosts",
+      database: () => listPrismaPosts(),
+      mock: () => listMockPosts(),
+    });
 
-  return curateRecruitPosts(repairCorruptedSeedPosts(posts));
+    return curateRecruitPosts(repairCorruptedSeedPosts(posts));
+  } catch (error) {
+    logRepositoryFallback(
+      "recruit.listRecruitPosts: post curation failed; falling back to canonical seed posts",
+      error,
+    );
+    return getCanonicalRecruitPosts();
+  }
 }
 
 export async function findRecruitPost(slug: string) {
-  const posts = await withRepositoryFallback({
-    scope: "recruit.findRecruitPost",
-    database: () => listPrismaPosts(),
-    mock: () => listMockPosts(),
-  });
+  try {
+    const posts = await withRepositoryFallback({
+      scope: "recruit.findRecruitPost",
+      database: () => listPrismaPosts(),
+      mock: () => listMockPosts(),
+    });
 
-  return findCuratedRecruitPost(repairCorruptedSeedPosts(posts), slug);
+    return findCuratedRecruitPost(repairCorruptedSeedPosts(posts), slug);
+  } catch (error) {
+    logRepositoryFallback(
+      `recruit.findRecruitPost(${slug}): post curation failed; falling back to canonical seed posts`,
+      error,
+    );
+    return findCuratedRecruitPost(getCanonicalRecruitPosts(), slug);
+  }
 }
 
 export async function createRecruitPost(
